@@ -13,7 +13,7 @@ disease:
   lam: 1/180
   f1: 0.01
   phi: {form: power, delta: 0.5}
-  M: 4
+  M: 8
 regions: {source: synthetic_random, K: 17, seed: 7, total_population: 5.0e7}
 contact_model:
   h: {form: power, eta: 0.2}

@@ -64,7 +64,7 @@ class Disease(Strict):
     lam: Num = Field(ge=0, description="면역 소실 율 [1/일]")
     f1: Num = Field(ge=0, le=1)
     phi: dict = Field(default_factory=lambda: {"form": "power", "delta": 0.5})
-    M: int = Field(4, ge=1)
+    M: int = Field(8, ge=1, description="감염 횟수 칸 수. 1-B 수렴 측정에 따라 기본 8")
     note: str = ""
 
 
@@ -168,6 +168,8 @@ class Simulation(Strict):
     tau_leap_epsilon: Num = Field(0.03, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차")
     sde_dt: Num = Field(0.05, gt=0)
     ode: OdeSolver = Field(default_factory=OdeSolver)
+    last_bin_warn: Num = Field(0.01, gt=0, le=1,
+                               description="마지막 칸 I 점유율이 이 값을 넘으면 경고 (M 부족 신호)")
 
 
 # ---------------------------------------------------------------- 자료 출처 기록

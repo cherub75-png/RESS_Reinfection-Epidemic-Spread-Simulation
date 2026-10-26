@@ -20,7 +20,7 @@ disease:
   lam: 1/180            # 1/일, 면역 소실
   f1: 0.01
   phi: {form: power, delta: 0.5}   # phi(n) = n^-0.5
-  M: 4
+  M: 8
   note: initial code-verification assumptions, not fitted to COVID-19 data
 
 regions:

@@ -13,7 +13,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from ..model.reactions import ReactionSystem
-from .result import Trajectory
+from .result import DEFAULT_LAST_BIN_WARN, Trajectory, check_last_bin
 
 
 def _segments(system: ReactionSystem, t0: float, t1: float) -> list[tuple[float, float]]:
@@ -29,7 +29,7 @@ def _segments(system: ReactionSystem, t0: float, t1: float) -> list[tuple[float,
 
 def integrate_ode(system: ReactionSystem, X0: np.ndarray, days: float, output_dt: float = 1.0,
                   method: str = "DOP853", rtol: float = 1e-8, atol: float = 1e-6,
-                  t0: float = 0.0) -> Trajectory:
+                  t0: float = 0.0, last_bin_warn: float = DEFAULT_LAST_BIN_WARN) -> Trajectory:
     shape = X0.shape
     t_end = t0 + days
     n_out = int(np.floor(days / output_dt + 1e-9)) + 1
@@ -70,5 +70,5 @@ def integrate_ode(system: ReactionSystem, X0: np.ndarray, days: float, output_dt
         "max_rel_population_error": float(np.max(np.abs(pop - pop0)) / pop0) if pop0 > 0 else 0.0,
     }
     tr = Trajectory(grid, out, system.layout, "ode", meta)
-    meta["last_bin_share"] = tr.last_bin_share()
+    check_last_bin(tr, last_bin_warn)
     return tr

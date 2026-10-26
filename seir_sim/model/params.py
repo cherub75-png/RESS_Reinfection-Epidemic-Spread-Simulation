@@ -44,7 +44,7 @@ class EpiParams:
     lam: float
     f1: float
     phi_spec: dict = field(default_factory=lambda: {"form": "power", "delta": 0.5})
-    M: int = 4
+    M: int = 8          # 1-B 수렴 측정으로 4 -> 8 (승인됨)
 
     def __post_init__(self):
         if int(self.M) != self.M or self.M < 1:
