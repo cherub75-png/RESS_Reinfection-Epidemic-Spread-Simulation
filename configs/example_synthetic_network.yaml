@@ -1,0 +1,24 @@
+# 1-A 검증용 예제: 무작위 합성 지역 17개 (대한민국 시도 자료가 아니다. 실제 자료는 1-D 에서).
+run_mode: development
+meta: {name: example_synthetic_network}
+disease:
+  sigma: 1/5.2
+  gamma: 1/7
+  transmission: {R0: 2.5, r0_reference: network}
+  P1: 1.0
+  T1: 1.0
+  Pmin: 0.3
+  alpha: 0.5
+  beta: 0.3
+  lam: 1/180
+  f1: 0.01
+  phi: {form: power, delta: 0.5}
+  M: 4
+regions: {source: synthetic_random, K: 17, seed: 7, total_population: 5.0e7}
+contact_model:
+  h: {form: power, eta: 0.2}
+  rho_ref: pop_weighted_mean
+initial:
+  start_date: 2020-01-20
+  seeds: [{region: syn0, count: 10}]
+simulation: {days: 365, method: ode, n_runs: 100}

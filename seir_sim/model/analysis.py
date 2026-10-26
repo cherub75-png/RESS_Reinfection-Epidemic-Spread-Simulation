@@ -1,0 +1,115 @@
+"""재생산수와 초기 증가율: 1.4절 방정식을 선형화해서 유도한다 (docs/MODEL.md 4절).
+
+다음 세대 행렬 (van den Driessche & Watmough 2002)
+  감염 구획 x = (E_{n,i}, I_{n,i})
+  dx/dt = F x - V x
+  K_ngm = F V^{-1},  R = 스펙트럼 반지름(K_ngm)
+
+F[E_{n,i}, I_{k,j}] = A_{n,i} g_i c_i C_ij T(k) / N_j
+  A_{n,i} = 1{n=1} P_1 S_i + sum_{l: m(l)=n} ( P(l+1) R^P_{l,i} + P_1 R^W_{l,i} )
+V: E 이탈 sigma + sum_j omega_ij, I 이탈 gamma + sum_j omega_ij, 이동 유입 -omega_ji, E->I 는 -sigma.
+
+감염자가 없는 상태(E = I = 0)에서는 정확한 선형화다. 그 밖의 상태에서는 감수성 인구를
+그 시점 값으로 고정한 순간 재생산수 R_t 로 해석한다.
+
+단일 지역, 전원 감수성, 이동 없음이면 F 와 V 가 2x2 가 되어 R0 = kappa / gamma 이다.
+여기서 kappa = g c P_1 T_1, c = c0 h(rho)(1-u).
+R0 는 c0 에 선형이다 (F 가 c0 에 비례하고 V 는 c0 와 무관). 따라서
+  c0 = R0_target / R(c0 = 1)
+이 정확하다. h, g, u, C, omega, 인구 분포의 영향은 모두 R(c0 = 1) 에 들어간다.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+from .reactions import ReactionSystem
+
+
+def _infected_index(system: ReactionSystem) -> np.ndarray:
+    L = system.layout
+    idx = []
+    for i in range(L.K):
+        idx += [L.flat(i, L.E(n)) for n in range(1, L.M + 1)]
+        idx += [L.flat(i, L.I(n)) for n in range(1, L.M + 1)]
+    return np.array(idx)
+
+
+def next_generation_matrices(system: ReactionSystem, X: np.ndarray, t: float = 0.0):
+    """(F, V) 를 감염 구획 순서 [지역 i: E_1..E_M, I_1..I_M] 로 반환한다."""
+    p, L, reg = system.params, system.layout, system.regions
+    K, M = L.K, L.M
+    dim = 2 * M
+    F = np.zeros((K * dim, K * dim))
+    V = np.zeros((K * dim, K * dim))
+    e = lambda i, n: i * dim + (n - 1)          # noqa: E731
+    I = lambda i, n: i * dim + M + (n - 1)      # noqa: E731
+
+    N = L.alive(X)
+    gc = system.drivers.g(t) * system.contact_rate(t)
+    T, P_next = p.T_by_n, p.P_next_by_n
+
+    A = np.zeros((K, M))
+    A[:, 0] += p.P1 * X[:, L.S]
+    for l in range(1, M + 1):
+        A[:, p.m(l) - 1] += P_next[l - 1] * X[:, L.RP(l)] + p.P1 * X[:, L.RW(l)]
+
+    for i in range(K):
+        for j in range(K):
+            if N[j] <= 0 or reg.contact[i, j] == 0:
+                continue
+            for n in range(1, M + 1):
+                for k in range(1, M + 1):
+                    F[e(i, n), I(j, k)] = A[i, n - 1] * gc[i] * reg.contact[i, j] * T[k - 1] / N[j]
+
+    om = reg.mobility
+    out = om.sum(axis=1)
+    for i in range(K):
+        for n in range(1, M + 1):
+            V[e(i, n), e(i, n)] = p.sigma + out[i]
+            V[I(i, n), I(i, n)] = p.gamma + out[i]
+            V[I(i, n), e(i, n)] = -p.sigma
+            for j in range(K):
+                if om[j, i] > 0:
+                    V[e(i, n), e(j, n)] -= om[j, i]
+                    V[I(i, n), I(j, n)] -= om[j, i]
+    return F, V
+
+
+def reproduction_number(system: ReactionSystem, X: np.ndarray, t: float = 0.0) -> float:
+    F, V = next_generation_matrices(system, X, t)
+    Kn = F @ np.linalg.inv(V)
+    return float(np.max(np.abs(np.linalg.eigvals(Kn))))
+
+
+def disease_free_state(system: ReactionSystem) -> np.ndarray:
+    X = system.layout.empty()
+    X[:, system.layout.S] = system.regions.population
+    return X
+
+
+def c0_reference(R0: float, params) -> float:
+    """기준 조건(단일 지역, rho = rho_ref, g = 1, u = 0, 이동 없음)에서 R0 = c0 P_1 T_1 / gamma."""
+    denom = params.P1 * params.T1
+    if denom <= 0:
+        raise ValueError("P1 * T1 > 0 이어야 R0 로부터 c0 를 정할 수 있다")
+    return R0 * params.gamma / denom
+
+
+def c0_network(R0: float, system: ReactionSystem, X: np.ndarray | None = None, t: float = 0.0) -> float:
+    """주어진 지역망·시점 t 의 NGM 스펙트럼 반지름이 R0 가 되도록 c0 를 정한다."""
+    X = disease_free_state(system) if X is None else X
+    R_unit = reproduction_number(system.with_params(c0=1.0), X, t)
+    if R_unit <= 0:
+        raise ValueError("c0 = 1 에서 R = 0 이다. 전파가 불가능한 설정이다")
+    return R0 / R_unit
+
+
+def kappa(params, h: float = 1.0, g: float = 1.0, u: float = 0.0) -> float:
+    """kappa = c P_1 T_1,  c = c0 h (1 - u),  g 를 곱한 실효값."""
+    return g * params.c0 * h * (1.0 - u) * params.P1 * params.T1
+
+
+def initial_growth_rate(sigma: float, gamma: float, kappa_: float) -> float:
+    """r = [-(sigma + gamma) + sqrt((sigma - gamma)^2 + 4 sigma kappa)] / 2  (1.6절)."""
+    return 0.5 * (-(sigma + gamma) + np.sqrt((sigma - gamma) ** 2 + 4.0 * sigma * kappa_))
