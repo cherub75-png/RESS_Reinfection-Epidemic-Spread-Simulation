@@ -198,7 +198,10 @@ def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = No
                 out, meta = _simulate(sc, method, c)
                 runs[r], metas[r] = out, meta
     else:
-        with ProcessPoolExecutor(max_workers=workers, initializer=_init_worker,
+        import multiprocessing as mp
+        # fork 는 다중 스레드 부모에서 교착 위험이 있어 forkserver 를 쓴다 (작업자는 설정 JSON 에서 시나리오를 새로 만든다)
+        ctx = mp.get_context("forkserver" if "forkserver" in mp.get_all_start_methods() else "spawn")
+        with ProcessPoolExecutor(max_workers=workers, mp_context=ctx, initializer=_init_worker,
                                  initargs=(cfg.model_dump_json(),)) as ex:
             for r, out, meta in ex.map(_work, [(r, method, c) for r, c in enumerate(children)], chunksize=1):
                 runs[r], metas[r] = out, meta
