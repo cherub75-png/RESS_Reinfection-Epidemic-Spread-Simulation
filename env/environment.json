@@ -6,6 +6,7 @@
   "cpu_count": 4,
   "packages": {
     "numpy": "2.5.3",
+    "scipy": "1.18.1",
     "pydantic": "2.13.5",
     "PyYAML": "6.0.3",
     "pytest": "9.1.1"

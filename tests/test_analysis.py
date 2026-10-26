@@ -97,3 +97,30 @@ def test_growth_rate_matches_linearization_of_event_list(R0):
     # 전체 야코비안의 최대 실수 고유값도 (양수일 때) 같다
     if R0 > 1:
         assert np.max(np.linalg.eigvals(J).real) == pytest.approx(r_formula, rel=1e-6)
+
+
+def test_ngm_matches_drift_jacobian_network():
+    """F - V 가 사건 목록 drift 의 감염 부분 야코비안과 같다 (이동, h, u 이질성 포함 지역망).
+    drift 는 무감염 상태 근방에서 감염 구획에 선형이므로 중앙차분이 정확하다."""
+    rng = np.random.default_rng(5)
+    reg = RegionSet.synthetic_random(5, rng, total_population=1e9, mobility_scale=0.02)
+    u = InterventionSchedule(5, [{"start": 0.0, "end": 10.0, "value": 0.3, "regions": [1]}])
+    sysm = ReactionSystem(make_params(), reg, Drivers(5, None, None, u), {"form": "power", "eta": 0.2})
+    X = A.disease_free_state(sysm)
+    F, V = A.next_generation_matrices(sysm, X)
+    idx = A._infected_index(sysm)
+    x0 = X.reshape(-1)
+    J = np.zeros((idx.size, idx.size))
+    for a, k in enumerate(idx):
+        xp, xm = x0.copy(), x0.copy()
+        xp[k] += 1.0
+        xm[k] -= 1.0
+        J[:, a] = (sysm.drift(xp.reshape(X.shape), 0.0) - sysm.drift(xm.reshape(X.shape), 0.0)).reshape(-1)[idx] / 2
+    np.testing.assert_allclose(J, F - V, atol=1e-12)
+
+
+def test_balanced_synthetic_mobility_is_stationary():
+    rng = np.random.default_rng(9)
+    reg = RegionSet.synthetic_random(7, rng, total_population=1e7, mobility_scale=0.05)
+    assert reg.mobility_imbalance() < 1e-14
+    np.testing.assert_allclose(reg.stationary_population(), reg.population, rtol=1e-10)

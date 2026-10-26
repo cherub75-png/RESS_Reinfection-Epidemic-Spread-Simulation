@@ -85,3 +85,40 @@ def test_dataset_regions_not_implemented():
     raw["regions"] = {"source": "dataset", "path": "x"}
     with pytest.raises(NotImplementedError):
         build_scenario(Config.model_validate(raw))
+
+
+def test_default_r0_basis_is_network_and_report_has_all_bases():
+    raw = _raw("example_single_region.yaml")
+    raw["disease"]["transmission"] = {"R0": 2.5}
+    cfg = Config.model_validate(raw)
+    assert cfg.disease.transmission.r0_reference == "network"
+    d = build_scenario(cfg).derived
+    for k in ("R0_reference", "R0_network_t0", "R0_network_stationary",
+              "mobility_imbalance_per_day", "R0_isolated_by_region"):
+        assert k in d
+
+
+def test_seed_compartment_switch():
+    raw = _raw("example_single_region.yaml")
+    raw["initial"]["seed_compartment"] = "E1"
+    sc = build_scenario(Config.model_validate(raw))
+    L = sc.system.layout
+    assert sc.X0[0, L.E(1)] == 10 and sc.X0[0, L.I(1)] == 0
+    raw["initial"]["seeds"] = [{"region": "region0", "count": 4, "compartment": "I1"},
+                               {"region": "region0", "count": 6}]
+    sc = build_scenario(Config.model_validate(raw))
+    assert sc.X0[0, L.I(1)] == 4 and sc.X0[0, L.E(1)] == 6 and sc.X0.sum() == pytest.approx(1e6)
+
+
+def test_g_status_rules():
+    raw = _raw("example_single_region.yaml")
+    assert build_scenario(Config.model_validate(raw)).derived["g_status"] == "neutral_default"
+    g = {"form": "exp_linear", "a_T": -0.02, "a_H": 0.0, "T_ref": 15.0, "H_ref": 60.0}
+    raw["environment"] = {"g": g, "status": "neutral_default"}
+    with pytest.raises(ValidationError, match="neutral_default"):
+        Config.model_validate(raw)
+    raw["environment"] = {"g": g, "status": "estimated"}
+    with pytest.raises(ValidationError, match="estimate_ref"):
+        Config.model_validate(raw)
+    raw["environment"] = {"g": g, "status": "user_assumption"}
+    Config.model_validate(raw)

@@ -113,3 +113,26 @@ def kappa(params, h: float = 1.0, g: float = 1.0, u: float = 0.0) -> float:
 def initial_growth_rate(sigma: float, gamma: float, kappa_: float) -> float:
     """r = [-(sigma + gamma) + sqrt((sigma - gamma)^2 + 4 sigma kappa)] / 2  (1.6절)."""
     return 0.5 * (-(sigma + gamma) + np.sqrt((sigma - gamma) ** 2 + 4.0 * sigma * kappa_))
+
+
+def r0_report(system: ReactionSystem, t: float = 0.0) -> dict:
+    """현재 c0 에서 여러 기준의 R0 를 모두 계산한다 (c0 를 어느 기준으로 정했는지와 무관).
+
+    - R0_reference: 기준 조건(h = 1, g = 1, u = 0, 단일 지역) c0 P1 T1 / gamma
+    - R0_network_t0: 전원 감수성, t0 인구 분포의 지역망 NGM 스펙트럼 반지름
+    - R0_network_stationary: 이동만 있을 때의 정지 인구 분포에서의 NGM 스펙트럼 반지름.
+      이동이 불균형이면(mobility_imbalance > 0) t0 인구가 유지되지 않으므로 이 값이 장기적으로 의미가 있다
+    - R0_isolated_by_region: 지역 i 가 자기 주민끼리만 접촉하고(C_ii = 1) 이동이 없을 때
+      g_i(t) c_i(t) P1 T1 / gamma. 최초 발생 지역(예: 해외 유입 원점)의 국지 전파력 비교용
+    """
+    p, reg = system.params, system.regions
+    local = system.drivers.g(t) * system.contact_rate(t) * p.P1 * p.T1 / p.gamma
+    X_st = disease_free_state(system)
+    X_st[:, system.layout.S] = reg.stationary_population()
+    return {
+        "R0_reference": p.c0 * p.P1 * p.T1 / p.gamma,
+        "R0_network_t0": reproduction_number(system, disease_free_state(system), t),
+        "R0_network_stationary": reproduction_number(system, X_st, t),
+        "mobility_imbalance_per_day": reg.mobility_imbalance(),
+        "R0_isolated_by_region": dict(zip(reg.names, map(float, local))),
+    }

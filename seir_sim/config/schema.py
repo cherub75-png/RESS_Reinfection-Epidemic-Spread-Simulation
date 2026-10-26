@@ -35,13 +35,14 @@ class Strict(BaseModel):
 class Transmission(Strict):
     """c0 를 직접 주거나 R0 를 준다 (둘 중 하나).
 
-    r0_reference
-      - reference: 단일 지역 기준 조건(h=1, g=1, u=0, 이동 없음)의 R0 = c0 P1 T1 / gamma
+    r0_reference (기본 network)
       - network:   실제 지역망의 t0 시점 다음 세대 행렬 스펙트럼 반지름
+      - reference: 단일 지역 기준 조건(h=1, g=1, u=0, 이동 없음)의 R0 = c0 P1 T1 / gamma
+    어느 기준으로 c0 를 정하든 두 값과 지역별 고립 R0 를 모두 계산해 실행 기록(derived)에 남긴다.
     """
     c0: Num | None = None
     R0: Num | None = None
-    r0_reference: Literal["reference", "network"] = "reference"
+    r0_reference: Literal["reference", "network"] = "network"
 
     @model_validator(mode="after")
     def _one(self):
@@ -92,8 +93,27 @@ class ContactModel(Strict):
 
 
 class Environment(Strict):
+    """환경 보정 g.
+
+    status
+      - neutral_default: g = 1 (환경 효과 없음). 실제 자료로 추정하기 전의 기본 상태이며
+                         "환경 효과가 없다" 는 추정 결과가 아니다.
+      - user_assumption: 사용자가 지정한 가정 계수 (추정값 아님)
+      - estimated:       2단계에서 실제 자료로 추정한 계수 (estimate_ref 에 추정 기록을 남긴다)
+    추정 전후 비교는 같은 설정에서 environment 블록만 바꿔 실행하면 된다.
+    """
     g: dict = Field(default_factory=lambda: {"form": "constant"})
+    status: Literal["neutral_default", "user_assumption", "estimated"] = "neutral_default"
+    estimate_ref: str | None = None
     series_path: str | None = None
+
+    @model_validator(mode="after")
+    def _status(self):
+        if self.status == "neutral_default" and self.g.get("form") != "constant":
+            raise ValueError("status=neutral_default 이면 g 는 constant (g = 1) 여야 한다")
+        if self.status == "estimated" and not self.estimate_ref:
+            raise ValueError("status=estimated 이면 추정 기록(estimate_ref)이 필요하다")
+        return self
 
 
 class InterventionPeriod(Strict):
@@ -108,11 +128,13 @@ class InterventionPeriod(Strict):
 class Seed(Strict):
     region: str
     count: Num = Field(gt=0)
-    compartment: str = "I1"
+    compartment: str | None = None     # None 이면 Initial.seed_compartment
 
 
 class Initial(Strict):
+    """초기 감염. seed_compartment 로 I1(감염 중)과 E1(잠복기) 배치를 바꿔 비교할 수 있다."""
     start_date: dt.date
+    seed_compartment: Literal["I1", "E1"] = "I1"
     seeds: list[Seed]
 
 
@@ -128,6 +150,13 @@ class Hybrid(Strict):
         return self
 
 
+class OdeSolver(Strict):
+    """scipy.integrate.solve_ivp 설정. g, u 가 바뀌는 시점마다 구간을 나눠 적분한다."""
+    method: Literal["DOP853", "RK45", "LSODA", "Radau", "BDF"] = "DOP853"
+    rtol: Num = Field(1e-8, gt=0)
+    atol: Num = Field(1e-6, gt=0, description="절대 허용 오차 [명]")
+
+
 class Simulation(Strict):
     days: Num = Field(365, gt=0)
     output_dt: Num = Field(1.0, gt=0)
@@ -138,6 +167,7 @@ class Simulation(Strict):
     hybrid: Hybrid = Field(default_factory=Hybrid)
     tau_leap_epsilon: Num = Field(0.03, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차")
     sde_dt: Num = Field(0.05, gt=0)
+    ode: OdeSolver = Field(default_factory=OdeSolver)
 
 
 # ---------------------------------------------------------------- 자료 출처 기록

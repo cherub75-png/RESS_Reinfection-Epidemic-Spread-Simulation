@@ -68,20 +68,12 @@ def build_scenario(cfg: Config) -> Scenario:
         c0 = analysis.c0_network(tr.R0, system)
     system = system.with_params(c0=c0)
 
-    seeds: dict[int, float] = {}
-    comps = {s.compartment for s in cfg.initial.seeds}
-    if len(comps) != 1:
-        raise ValueError("현재는 모든 초기 감염자를 같은 구획에 심는다")
-    for s in cfg.initial.seeds:
-        seeds[regions.index(s.region)] = seeds.get(regions.index(s.region), 0.0) + s.count
-    X0 = initial_state(system.layout, regions.population, seeds, comps.pop())
+    seeds = [(regions.index(s.region), s.count, s.compartment or cfg.initial.seed_compartment)
+             for s in cfg.initial.seeds]
+    X0 = initial_state(system.layout, regions.population, seeds)
 
-    dfe = analysis.disease_free_state(system)
-    derived = {
-        "c0": c0,
-        "R0_reference": c0 * base.P1 * base.T1 / base.gamma,
-        "R0_network_t0": analysis.reproduction_number(system, dfe, 0.0),
-        "rho_ref": system.rho_ref,
-        "regions_synthetic": regions.synthetic,
-    }
+    derived = {"c0": c0, "c0_basis": "given" if tr.c0 is not None else tr.r0_reference,
+               **analysis.r0_report(system), "rho_ref": system.rho_ref,
+               "regions_synthetic": regions.synthetic,
+               "g_status": cfg.environment.status, "g_spec": dict(cfg.environment.g)}
     return Scenario(cfg, system, X0, derived)

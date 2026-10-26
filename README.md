@@ -6,16 +6,17 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | 1-A | 골격, 설정, 매개변수, 공통 사건 목록, R0 분석 | 완료 |
-| 1-B | ODE 적분기와 검증 | 예정 |
+| 1-B | ODE 적분기와 검증 (`docs/reports/1B_ode_validation.md`) | 완료 |
 | 1-C | CTMC / tau-leaping / SDE / hybrid | 예정 |
 | 1-D | 데이터 전처리 (GPW, Natural Earth, WorldClim, OpenFlights, radiation) | 예정 |
 | 1-E | 앙상블 실행기, CLI, 예제 그림 | 예정 |
 
 ## 실행
 ```bash
-pip install -e ".[test]"        # 의존성: numpy, pydantic, PyYAML (+ pytest)
+pip install -e ".[test]"        # 의존성: numpy, scipy, pydantic, PyYAML (+ pytest)
 python -m pytest                # 테스트
 python scripts/record_environment.py   # env/ 에 실행 환경 기록
+python scripts/report_1B.py            # 1-B 검증 보고서 (약 35초)
 ```
 
 ## 구조

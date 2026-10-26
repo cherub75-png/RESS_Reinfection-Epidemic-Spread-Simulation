@@ -11,7 +11,7 @@ disease:
   gamma: 1/7            # 1/일, 평균 감염기간 7일
   transmission:
     R0: 2.5
-    r0_reference: reference   # reference | network
+    r0_reference: network     # network (기본) | reference
   P1: 1.0
   T1: 1.0
   Pmin: 0.3
@@ -34,13 +34,15 @@ contact_model:
 
 environment:
   g: {form: constant}
+  status: neutral_default   # g = 1: 환경 효과 없음 (추정 전 기본 상태, 추정 결과 아님)
 
 interventions: []
 
 initial:
   start_date: 2020-01-20
+  seed_compartment: I1      # I1 (감염 중) | E1 (잠복기)
   seeds:
-    - {region: region0, count: 10, compartment: I1}
+    - {region: region0, count: 10}
 
 simulation:
   days: 365

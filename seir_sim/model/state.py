@@ -97,21 +97,25 @@ class Layout:
         return X[:, self.I_slice].sum(axis=1)
 
 
-def initial_state(layout: Layout, population: np.ndarray, seeds: dict[int, float],
+def initial_state(layout: Layout, population: np.ndarray,
+                  seeds: dict[int, float] | list[tuple[int, float, str]],
                   compartment: str = "I1") -> np.ndarray:
-    """전원 감수성인 초기 상태에 감염자를 심는다. seeds: {지역 색인: 인원}.
+    """전원 감수성인 초기 상태에 감염자를 심는다.
 
+    seeds: {지역 색인: 인원} (모두 compartment 에 심음) 또는 [(지역 색인, 인원, 구획), ...].
     심은 인원은 해당 지역 S 에서 빼므로 총인구는 보존된다.
     """
     X = layout.empty()
     X[:, layout.S] = population
     labels = layout.labels()
-    if compartment not in labels or compartment == "D" or compartment == "S":
-        raise ValueError(f"초기 감염 구획은 E/I/R 중 하나여야 한다: {compartment!r}")
-    comp = labels.index(compartment)
-    for i, k in seeds.items():
+    items = ([(i, k, compartment) for i, k in seeds.items()] if isinstance(seeds, dict)
+             else list(seeds))
+    for i, k, comp_name in items:
+        if comp_name not in labels or comp_name in ("D", "S"):
+            raise ValueError(f"초기 감염 구획은 E/I/R 중 하나여야 한다: {comp_name!r}")
+        comp = labels.index(comp_name)
         if k > X[i, layout.S]:
-            raise ValueError(f"지역 {i} 의 초기 감염자 {k} 가 인구보다 많다")
+            raise ValueError(f"지역 {i} 의 초기 감염자 {k} 가 남은 감수성 인구보다 많다")
         X[i, layout.S] -= k
         X[i, comp] += k
     return X

@@ -59,6 +59,37 @@ class RegionSet:
             return float(np.sum(self.population * self.density) / np.sum(self.population))
         raise ValueError(f"알 수 없는 rho_ref: {mode!r}")
 
+    # ------------------------------------------------------------ 이동 균형
+
+    def mobility_net_flow(self, population: np.ndarray | None = None) -> np.ndarray:
+        """지역별 순유입률 [명/일]: sum_j omega_ji N_j - sum_j omega_ij N_i."""
+        N = self.population if population is None else population
+        return self.mobility.T @ N - self.mobility.sum(axis=1) * N
+
+    def mobility_imbalance(self) -> float:
+        """max_i |순유입률_i| / N_i [1/일]. 0 이면 무감염 상태에서 인구가 변하지 않는다.
+
+        0 이 아니면 감염이 없어도 이동만으로 지역 인구가 재분포된다. 그러면 t0 인구로 계산한
+        R0_network_t0 는 그 순간의 값일 뿐이다 (docs/MODEL.md 4.1절).
+        """
+        N = self.population
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r = np.abs(self.mobility_net_flow()) / N
+        return float(np.nanmax(np.where(N > 0, r, 0.0))) if self.K else 0.0
+
+    def stationary_population(self) -> np.ndarray:
+        """이동만 있을 때(감염·사망 없음)의 정지 인구 분포 (총인구 보존).
+
+        dN/dt = (omega^T - diag(omega 1)) N 의 영공간이다. 이동망이 강연결이면 유일하다.
+        """
+        Q = self.mobility.T - np.diag(self.mobility.sum(axis=1))
+        if not np.any(Q):
+            return self.population.copy()
+        w, v = np.linalg.eig(Q)
+        k = int(np.argmin(np.abs(w)))
+        x = np.abs(v[:, k].real)
+        return x / x.sum() * self.population.sum()
+
     # ------------------------------------------------------------ 합성 자료
 
     @classmethod
@@ -70,8 +101,14 @@ class RegionSet:
 
     @classmethod
     def synthetic_random(cls, K: int, rng: np.random.Generator, total_population: float = 1e6,
-                         mobility_scale: float = 1e-3, self_contact: float = 0.8) -> "RegionSet":
-        """무작위 합성 지역 집합 (검증용, 실제 지역 아님)."""
+                         mobility_scale: float = 1e-3, self_contact: float = 0.8,
+                         balanced: bool = True) -> "RegionSet":
+        """무작위 합성 지역 집합 (검증용, 실제 지역 아님).
+
+        balanced=True 이면 이동이 양방향 같은 양(omega_ij N_i = omega_ji N_j)이 되도록 만든다.
+        omega_ij = mobility_scale * W_ij * N_j / mean(N), W 는 대칭 무작위 행렬이다.
+        이 경우 무감염 상태에서 지역 인구가 변하지 않는다.
+        """
         pop = rng.dirichlet(np.ones(K)) * total_population
         dens = rng.lognormal(mean=5.0, sigma=1.0, size=K)
         off = rng.random((K, K))
@@ -81,7 +118,12 @@ class RegionSet:
             C = off + np.eye(K) * self_contact
         else:
             C = np.ones((1, 1))
-        om = rng.random((K, K)) * mobility_scale
+        W = rng.random((K, K))
+        if balanced:
+            W = 0.5 * (W + W.T)
+            om = mobility_scale * W * pop[None, :] / pop.mean()
+        else:
+            om = W * mobility_scale
         np.fill_diagonal(om, 0.0)
         return cls(tuple(f"syn{i}" for i in range(K)), pop, dens, C, om, synthetic=True,
-                   provenance={"source": "synthetic_random", "K": K})
+                   provenance={"source": "synthetic_random", "K": K, "balanced_mobility": balanced})
