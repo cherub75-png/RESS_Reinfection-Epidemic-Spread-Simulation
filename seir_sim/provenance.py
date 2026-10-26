@@ -11,7 +11,7 @@ from importlib import metadata
 from pathlib import Path
 
 TRACKED_PACKAGES = ("numpy", "scipy", "numba", "pydantic", "PyYAML", "pytest",
-                    "xarray", "netCDF4", "h5netcdf", "pyarrow",
+                    "xarray", "netCDF4", "h5netcdf", "pyarrow", "pandas",
                     "geopandas", "rasterio", "shapely", "pyproj", "h5py", "matplotlib", "typer")
 
 

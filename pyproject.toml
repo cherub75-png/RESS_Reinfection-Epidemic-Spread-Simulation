@@ -21,10 +21,14 @@ dependencies = [
     "h5py>=3.16",
     "pyarrow>=26.0",
     "matplotlib>=3.11",
+    "pandas>=3.0",
 ]
 
 [project.optional-dependencies]
 test = ["pytest>=9.1"]
+
+[project.scripts]
+seir-sim = "seir_sim.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["seir_sim*"]
