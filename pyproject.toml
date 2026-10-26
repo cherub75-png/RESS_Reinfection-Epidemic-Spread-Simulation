@@ -13,6 +13,14 @@ dependencies = [
     "PyYAML>=6.0",
     "scipy>=1.18",
     "numba>=0.68",
+    "shapely>=2.2",
+    "pyproj>=3.8",
+    "rasterio>=1.5",
+    "xarray>=2026.9",
+    "h5netcdf>=1.8",
+    "h5py>=3.16",
+    "pyarrow>=26.0",
+    "matplotlib>=3.11",
 ]
 
 [project.optional-dependencies]

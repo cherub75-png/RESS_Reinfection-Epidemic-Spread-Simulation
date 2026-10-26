@@ -74,7 +74,7 @@ class Regions(Strict):
     """source
       - synthetic_single: 단일 합성 지역 (population, density)
       - synthetic_random: 무작위 합성 지역 K개 (seed)
-      - dataset:          data 계층이 만든 지역 파일 (1-D 에서 구현)
+      - dataset:          data 계층이 만든 지역 데이터셋 파일 (NetCDF, scripts/build_regions.py), path 필수
     """
     source: Literal["synthetic_single", "synthetic_random", "dataset"]
     population: Num | None = None
@@ -105,7 +105,7 @@ class Environment(Strict):
     g: dict = Field(default_factory=lambda: {"form": "constant"})
     status: Literal["neutral_default", "user_assumption", "estimated"] = "neutral_default"
     estimate_ref: str | None = None
-    series_path: str | None = None
+    source: Literal["none", "dataset"] = "none"    # dataset: 지역 데이터셋의 월별 기온·습도
 
     @model_validator(mode="after")
     def _status(self):

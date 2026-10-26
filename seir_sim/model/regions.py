@@ -77,18 +77,21 @@ class RegionSet:
             r = np.abs(self.mobility_net_flow()) / N
         return float(np.nanmax(np.where(N > 0, r, 0.0))) if self.K else 0.0
 
-    def stationary_population(self) -> np.ndarray:
-        """이동만 있을 때(감염·사망 없음)의 정지 인구 분포 (총인구 보존).
+    def stationary_population(self, horizon_days: float = 1e5) -> np.ndarray:
+        """이동만 있을 때(감염·사망 없음) 현재 인구 분포에서 출발해 도달하는 장기 인구 분포.
 
-        dN/dt = (omega^T - diag(omega 1)) N 의 영공간이다. 이동망이 강연결이면 유일하다.
+        dN/dt = (omega^T - diag(omega 1)) N. 균형 이동이면 현재 인구가 이미 정지 상태이다.
+        이동망이 여러 덩어리로 나뉘면 정지 분포가 유일하지 않으므로, 고유벡터 대신
+        exp(Q T) N0 (T = horizon_days) 를 계산한다. 덩어리마다 인구가 보존된다.
         """
+        N0 = self.population.astype(float)
+        if not np.any(self.mobility) or self.mobility_imbalance() < 1e-12:
+            return N0.copy()
+        from scipy.linalg import expm
         Q = self.mobility.T - np.diag(self.mobility.sum(axis=1))
-        if not np.any(Q):
-            return self.population.copy()
-        w, v = np.linalg.eig(Q)
-        k = int(np.argmin(np.abs(w)))
-        x = np.abs(v[:, k].real)
-        return x / x.sum() * self.population.sum()
+        x = expm(Q * horizon_days) @ N0
+        x = np.maximum(x, 0.0)
+        return x / x.sum() * N0.sum()
 
     # ------------------------------------------------------------ 합성 자료
 

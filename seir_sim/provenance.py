@@ -12,7 +12,7 @@ from pathlib import Path
 
 TRACKED_PACKAGES = ("numpy", "scipy", "numba", "pydantic", "PyYAML", "pytest",
                     "xarray", "netCDF4", "h5netcdf", "pyarrow",
-                    "geopandas", "rasterio", "matplotlib", "typer")
+                    "geopandas", "rasterio", "shapely", "pyproj", "h5py", "matplotlib", "typer")
 
 
 def package_versions() -> dict[str, str]:

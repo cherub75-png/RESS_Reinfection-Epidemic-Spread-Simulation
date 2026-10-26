@@ -124,3 +124,32 @@ def test_balanced_synthetic_mobility_is_stationary():
     reg = RegionSet.synthetic_random(7, rng, total_population=1e7, mobility_scale=0.05)
     assert reg.mobility_imbalance() < 1e-14
     np.testing.assert_allclose(reg.stationary_population(), reg.population, rtol=1e-10)
+
+
+@pytest.mark.parametrize("K,M", [(1, 1), (3, 2), (4, 3), (5, 4)])
+def test_reduced_ngm_equals_full_ngm(K, M):
+    """축소 K x K 행렬의 스펙트럼 반지름 = 전체 2KM x 2KM 다음 세대 행렬 (이동, 면역자, 이질성 포함)."""
+    rng = np.random.default_rng(10 * K + M)
+    reg = RegionSet.synthetic_random(K, rng, total_population=1e6, mobility_scale=0.05, balanced=False)
+    u = InterventionSchedule(K, [{"start": 0.0, "end": 5.0, "value": 0.3, "regions": [0]}])
+    sysm = ReactionSystem(make_params(M=M, alpha=0.7), reg, Drivers(K, None, None, u), {"form": "power", "eta": 0.3})
+    L = sysm.layout
+    X = rng.random((K, L.ncomp)) * 1e4
+    X[:, L.E_slice] = 0.0
+    X[:, L.I_slice] = 0.0
+    assert A.reproduction_number(sysm, X) == pytest.approx(A.reproduction_number_full(sysm, X), rel=1e-9)
+    X0 = A.disease_free_state(sysm)
+    assert A.reproduction_number(sysm, X0) == pytest.approx(A.reproduction_number_full(sysm, X0), rel=1e-9)
+
+
+def test_stationary_population_disconnected_network():
+    """이동망이 두 덩어리로 나뉘고 불균형일 때 덩어리별 인구가 보존된다 (고유벡터 선택 오류 회귀 테스트)."""
+    om = np.zeros((4, 4))
+    om[0, 1], om[1, 0] = 0.02, 0.01          # 덩어리 {0,1}: 불균형
+    om[2, 3], om[3, 2] = 0.01, 0.01          # 덩어리 {2,3}
+    pop = np.array([100.0, 100.0, 300.0, 500.0])
+    reg = RegionSet(tuple("abcd"), pop, np.ones(4), np.eye(4), om, True)
+    st = reg.stationary_population()
+    assert st[:2].sum() == pytest.approx(200.0) and st[2:].sum() == pytest.approx(800.0)
+    np.testing.assert_allclose(reg.mobility_net_flow(st), 0.0, atol=1e-8)
+    np.testing.assert_allclose(st, [200 / 3, 400 / 3, 400.0, 400.0], rtol=1e-8)

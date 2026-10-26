@@ -80,10 +80,13 @@ def test_hybrid_threshold_order():
         Config.model_validate(raw)
 
 
-def test_dataset_regions_not_implemented():
+def test_dataset_regions_missing_file_raises():
     raw = _raw("example_single_region.yaml")
-    raw["regions"] = {"source": "dataset", "path": "x"}
-    with pytest.raises(NotImplementedError):
+    raw["regions"] = {"source": "dataset", "path": "/nonexistent/x.nc"}
+    with pytest.raises(FileNotFoundError):
+        build_scenario(Config.model_validate(raw))
+    raw["regions"] = {"source": "dataset"}
+    with pytest.raises(ValueError, match="path"):
         build_scenario(Config.model_validate(raw))
 
 
@@ -94,7 +97,8 @@ def test_default_r0_basis_is_network_and_report_has_all_bases():
     assert cfg.disease.transmission.r0_reference == "network"
     d = build_scenario(cfg).derived
     for k in ("R0_reference", "R0_network_t0", "R0_network_stationary",
-              "mobility_imbalance_per_day", "R0_isolated_by_region"):
+              "mobility_imbalance_per_day", "R0_isolated_by_region", "R0_network_dominant_regions",
+              "R0_network_dominant_population_share", "R0_isolated_population_weighted_mean"):
         assert k in d
 
 

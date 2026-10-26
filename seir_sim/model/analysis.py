@@ -76,10 +76,41 @@ def next_generation_matrices(system: ReactionSystem, X: np.ndarray, t: float = 0
     return F, V
 
 
-def reproduction_number(system: ReactionSystem, X: np.ndarray, t: float = 0.0) -> float:
+def reproduction_number_full(system: ReactionSystem, X: np.ndarray, t: float = 0.0) -> float:
+    """전체 (2KM x 2KM) 다음 세대 행렬로 계산한다. 검증용 (K 가 크면 느리다)."""
     F, V = next_generation_matrices(system, X, t)
     Kn = F @ np.linalg.inv(V)
     return float(np.max(np.abs(np.linalg.eigvals(Kn))))
+
+
+def reduced_ngm(system: ReactionSystem, X: np.ndarray, t: float = 0.0) -> np.ndarray:
+    """F V^{-1} 의 0이 아닌 고유값을 그대로 갖는 K x K 행렬 (정확한 축소).
+
+    V 는 감염 횟수 n 마다 같은 블록 [[sigma I + L, 0], [-sigma I, gamma I + L]] 이다.
+    L = diag(out) - omega^T 는 이동 생성자이다. 그러면 (V^{-1})_{I_n, E_n} = sigma (gamma I + L)^{-1} (sigma I + L)^{-1} = W 이다.
+    F[E_n i, I_k j] = A_{n,i} gc_i C_ij T(k) / N_j 이므로, 고유값 문제는 y_i = sum_n T(n) x_{n,i} 로 줄어든다.
+      K_red = diag(a_eff * gc) C diag(1/N) W,   a_eff_i = sum_n T(n) A_{n,i}
+    """
+    p, L, reg = system.params, system.layout, system.regions
+    K, M = L.K, L.M
+    N = L.alive(X)
+    gc = system.drivers.g(t) * system.contact_rate(t)
+    T, P_next = p.T_by_n, p.P_next_by_n
+    A = np.zeros((K, M))
+    A[:, 0] += p.P1 * X[:, L.S]
+    for l in range(1, M + 1):
+        A[:, p.m(l) - 1] += P_next[l - 1] * X[:, L.RP(l)] + p.P1 * X[:, L.RW(l)]
+    a_eff = A @ T
+    Lm = np.diag(reg.mobility.sum(axis=1)) - reg.mobility.T
+    I = np.eye(K)
+    W = p.sigma * np.linalg.solve(p.gamma * I + Lm, np.linalg.solve(p.sigma * I + Lm, I))
+    invN = np.divide(1.0, N, out=np.zeros_like(N), where=N > 0)
+    return (a_eff * gc)[:, None] * reg.contact * invN[None, :] @ W
+
+
+def reproduction_number(system: ReactionSystem, X: np.ndarray, t: float = 0.0) -> float:
+    """R = 스펙트럼 반지름(F V^{-1}). 축소 행렬 reduced_ngm 으로 계산한다 (전체 행렬과 같음: 테스트로 확인)."""
+    return float(np.max(np.abs(np.linalg.eigvals(reduced_ngm(system, X, t)))))
 
 
 def disease_free_state(system: ReactionSystem) -> np.ndarray:
@@ -129,10 +160,25 @@ def r0_report(system: ReactionSystem, t: float = 0.0) -> dict:
     local = system.drivers.g(t) * system.contact_rate(t) * p.P1 * p.T1 / p.gamma
     X_st = disease_free_state(system)
     X_st[:, system.layout.S] = reg.stationary_population()
+    dfe = disease_free_state(system)
+    Kr = reduced_ngm(system, dfe, t)
+    w, v = np.linalg.eig(Kr)
+    k = int(np.argmax(np.abs(w)))
+    y = np.abs(v[:, k].real)
+    y = y / y.sum() if y.sum() > 0 else y
+    order = np.argsort(y)[::-1]
+    cover = order[: int(np.searchsorted(np.cumsum(y[order]), 0.9) + 1)]
+    pop = reg.population
+    dom_share = float(pop[cover].sum() / pop.sum()) if pop.sum() > 0 else 0.0
     return {
         "R0_reference": p.c0 * p.P1 * p.T1 / p.gamma,
-        "R0_network_t0": reproduction_number(system, disease_free_state(system), t),
+        "R0_network_t0": float(np.abs(w[k])),
         "R0_network_stationary": reproduction_number(system, X_st, t),
         "mobility_imbalance_per_day": reg.mobility_imbalance(),
         "R0_isolated_by_region": dict(zip(reg.names, map(float, local))),
+        # 지역망 R0 의 주 고유모드가 몰린 지역 (고유벡터 질량 90%) 과 그 인구 비율
+        "R0_network_dominant_regions": [reg.names[i] for i in cover[:10]],
+        "R0_network_dominant_population_share": dom_share,
+        "R0_network_dominated_by_small_population": dom_share < 0.05,
+        "R0_isolated_population_weighted_mean": float(np.sum(local * pop) / pop.sum()) if pop.sum() > 0 else 0.0,
     }
