@@ -210,3 +210,16 @@ def test_real_korea_admin1_boundaries():
     seoul = g.area_km2[g.ids.index("KR-11")]
     assert 500 < seoul < 700                                            # 실제 약 605 km^2 (1:10m 일반화)
     assert 1.0e5 > g.area_km2.sum() > 9.0e4
+
+
+@needs_raw
+@pytest.mark.parametrize("a3", ["USA", "IND", "BRA", "DEU", "NGA", "JPN", "CHN", "AUS", "KOR"])
+def test_admin1_pipeline_is_country_agnostic(a3):
+    """같은 코드로 여러 나라의 1급 행정구역을 만든다: id 고유, 면적 합 = 국가 면적 (1:10m 일반화 차이 3% 이내)."""
+    from seir_sim.data.boundaries import load_admin0, load_admin1
+    g1 = load_admin1(RAW / "ne_admin1_10m" / "ne_10m_admin_1_states_provinces.geojson", a3)
+    g0 = load_admin0(RAW / "ne_admin0_10m" / "ne_10m_admin_0_countries.geojson")
+    assert len(set(g1.ids)) == g1.K > 1
+    a0 = g0.area_km2[g0.ids.index(a3)]
+    assert g1.area_km2.sum() == pytest.approx(a0, rel=0.03), (g1.area_km2.sum(), a0)
+    assert np.all(np.isfinite(g1.lon)) and np.all(np.abs(g1.lat) <= 90)
