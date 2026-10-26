@@ -7,7 +7,7 @@
 |---|---|---|
 | 1-A | 골격, 설정, 매개변수, 공통 사건 목록, R0 분석 | 완료 |
 | 1-B | ODE 적분기와 검증 (`docs/reports/1B_ode_validation.md`) | 완료 |
-| 1-C | CTMC 완료 (`docs/reports/1C_ctmc.md`) / tau-leaping / SDE / hybrid 예정 | 진행 중 |
+| 1-C | CTMC, 이동 사건 합치기, 이항 tau-leaping 완료 (`docs/reports/1C_ctmc.md`, `1C_tau.md`) / SDE, hybrid 예정 | 진행 중 |
 | 1-D | 데이터 전처리 (GPW, Natural Earth, WorldClim, OpenFlights, radiation) | 예정 |
 | 1-E | 앙상블 실행기, CLI, 예제 그림 | 예정 |
 
@@ -18,6 +18,7 @@ python -m pytest                # 테스트
 python scripts/record_environment.py   # env/ 에 실행 환경 기록
 python scripts/report_1B.py            # 1-B 검증 보고서 (약 35초)
 python scripts/report_1C.py            # 1-C CTMC 보고서 (약 40초)
+python scripts/report_1C_tau.py        # 1-C tau-leaping 보고서
 ```
 
 ## 구조

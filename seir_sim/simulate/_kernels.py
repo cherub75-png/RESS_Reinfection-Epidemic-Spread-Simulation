@@ -40,3 +40,28 @@ def propensities(x, src, const, susc, region, lam, a_out):
         a_out[j] = v
         a0 += v
     return a0
+
+
+@njit(cache=True)
+def mobility_propensities(x, K, ncomp, alive_end, out_rate, m_out):
+    """지역별 이동 율 out_i N_i. 합을 반환한다."""
+    tot = 0.0
+    for i in range(K):
+        N = 0.0
+        b = i * ncomp
+        for c in range(alive_end):
+            N += x[b + c]
+        v = out_rate[i] * N
+        m_out[i] = v
+        tot += v
+    return tot
+
+
+@njit(cache=True)
+def pick_destination(i, u, indptr, indices, cumprob):
+    """omega_ij / out_i 확률로 도착지 j 를 고른다 (u in [0,1))."""
+    lo, hi = indptr[i], indptr[i + 1]
+    for k in range(lo, hi):
+        if u < cumprob[k]:
+            return indices[k]
+    return indices[hi - 1]

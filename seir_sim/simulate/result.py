@@ -9,7 +9,7 @@ import numpy as np
 
 from ..model.state import Layout
 
-DEFAULT_LAST_BIN_WARN = 0.01
+DEFAULT_LAST_BIN_WARN = 0.05   # 1-C 결정: 1% -> 5% (오차 약 2e-4 수준)
 
 
 class LastBinWarning(UserWarning):

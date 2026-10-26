@@ -18,7 +18,7 @@ import numpy as np
 from numba import njit
 
 from ..model.reactions import ReactionSystem
-from ._kernels import force_of_infection, propensities
+from ._kernels import force_of_infection, mobility_propensities, pick_destination, propensities
 from .ode import _segments
 from .result import DEFAULT_LAST_BIN_WARN, Trajectory, check_last_bin
 
@@ -29,12 +29,13 @@ _DONE, _NEED_RANDOM, _STOPPED = 0, 1, 2
 def _ssa_segment(x, t, t_stop, out_times, out, k_out,
                  src, dst, const, susc, region, C, Tn, gc,
                  K, ncomp, E0, I0, M, alive_end,
-                 u, u_pos, ei_low, ei_high, a, lam):
+                 out_rate, indptr, indices, cumprob,
+                 u, u_pos, ei_low, ei_high, a, lam, mob):
     n_out = out_times.size
     events = 0
     check_ei = ei_low >= 0.0 or ei_high < np.inf
     while True:
-        if u_pos + 2 > u.size:
+        if u_pos + 4 > u.size:
             return t, k_out, u_pos, events, _NEED_RANDOM
         if check_ei:
             ei = 0.0
@@ -46,7 +47,8 @@ def _ssa_segment(x, t, t_stop, out_times, out, k_out,
                 return t, k_out, u_pos, events, _STOPPED
 
         force_of_infection(x, K, ncomp, I0, M, alive_end, Tn, C, gc, lam)
-        a0 = propensities(x, src, const, susc, region, lam, a)
+        a_loc = propensities(x, src, const, susc, region, lam, a)
+        a0 = a_loc + mobility_propensities(x, K, ncomp, alive_end, out_rate, mob)
         if a0 > 0.0:
             t_next = t - np.log(1.0 - u[u_pos]) / a0
         else:
@@ -65,20 +67,58 @@ def _ssa_segment(x, t, t_stop, out_times, out, k_out,
 
         target = u[u_pos] * a0          # [0, a0)
         u_pos += 1
-        cum = 0.0
-        j = 0
-        for jj in range(src.size):
-            cum += a[jj]
-            if cum > target:
-                j = jj
-                break
-        else:                            # 반올림 대비: 마지막 양의 율
-            for jj in range(src.size - 1, -1, -1):
-                if a[jj] > 0.0:
+        if target < a_loc:
+            cum = 0.0
+            j = -1
+            for jj in range(src.size):
+                cum += a[jj]
+                if cum > target:
                     j = jj
                     break
-        x[src[j]] -= 1.0
-        x[dst[j]] += 1.0
+            if j < 0:                    # 반올림 대비: 마지막 양의 율
+                for jj in range(src.size - 1, -1, -1):
+                    if a[jj] > 0.0:
+                        j = jj
+                        break
+            x[src[j]] -= 1.0
+            x[dst[j]] += 1.0
+        else:
+            # 이동: 지역 i (율 out_i N_i), 도착지 j (omega_ij/out_i), 구획 c (X_ic/N_i)
+            target -= a_loc
+            cum = 0.0
+            i = -1
+            for ii in range(K):
+                cum += mob[ii]
+                if cum > target:
+                    i = ii
+                    break
+            if i < 0:
+                for ii in range(K - 1, -1, -1):
+                    if mob[ii] > 0.0:
+                        i = ii
+                        break
+            jdst = pick_destination(i, u[u_pos], indptr, indices, cumprob)
+            u_pos += 1
+            b = i * ncomp
+            N = 0.0
+            for c in range(alive_end):
+                N += x[b + c]
+            tc = u[u_pos] * N
+            u_pos += 1
+            cum = 0.0
+            cc = -1
+            for c in range(alive_end):
+                cum += x[b + c]
+                if cum > tc:
+                    cc = c
+                    break
+            if cc < 0:
+                for c in range(alive_end - 1, -1, -1):
+                    if x[b + c] > 0.0:
+                        cc = c
+                        break
+            x[b + cc] -= 1.0
+            x[jdst * ncomp + cc] += 1.0
         t = t_next
         events += 1
 
@@ -98,6 +138,11 @@ def kernel_args(system: ReactionSystem):
             L.K, L.ncomp, L.E(1), L.I(1), L.M, L.D)
 
 
+def mobility_args(system: ReactionSystem):
+    mb = system.mobility
+    return mb.out_rate.astype(float), mb.indptr, mb.indices, mb.cumprob.astype(float)
+
+
 def simulate_ctmc(system: ReactionSystem, X0: np.ndarray, days: float, output_dt: float = 1.0,
                   seed=None, t0: float = 0.0, stop_EI_at_or_below: float = -1.0,
                   stop_EI_at_or_above: float = np.inf, chunk: int = 1 << 15,
@@ -112,8 +157,10 @@ def simulate_ctmc(system: ReactionSystem, X0: np.ndarray, days: float, output_dt
     out = np.full((n_out, shape[0] * shape[1]), np.nan)
     x = np.round(X0).reshape(-1).astype(np.float64).copy()
     src, dst, const, susc, region, C, Tn, K, ncomp, E0, I0, M, alive_end = kernel_args(system)
+    out_rate, indptr, indices, cumprob = mobility_args(system)
     a = np.empty(src.size)
     lam = np.empty(K)
+    mob = np.empty(K)
 
     u = rng.random(chunk)
     u_pos, k_out, events, stopped_at = 0, 0, 0, None
@@ -124,8 +171,8 @@ def simulate_ctmc(system: ReactionSystem, X0: np.ndarray, days: float, output_dt
         while True:
             t, k_out, u_pos, ev, status = _ssa_segment(
                 x, t, seg_b, grid, out, k_out, src, dst, const, susc, region, C, Tn, gc,
-                K, ncomp, E0, I0, M, alive_end, u, u_pos,
-                float(stop_EI_at_or_below), float(stop_EI_at_or_above), a, lam)
+                K, ncomp, E0, I0, M, alive_end, out_rate, indptr, indices, cumprob, u, u_pos,
+                float(stop_EI_at_or_below), float(stop_EI_at_or_above), a, lam, mob)
             events += ev
             if status == _NEED_RANDOM:
                 chunk = min(chunk * 2, 1 << 22)

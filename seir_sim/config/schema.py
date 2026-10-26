@@ -168,7 +168,7 @@ class Simulation(Strict):
     tau_leap_epsilon: Num = Field(0.03, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차")
     sde_dt: Num = Field(0.05, gt=0)
     ode: OdeSolver = Field(default_factory=OdeSolver)
-    last_bin_warn: Num = Field(0.01, gt=0, le=1,
+    last_bin_warn: Num = Field(0.05, gt=0, le=1,
                                description="마지막 칸 I 점유율이 이 값을 넘으면 경고 (M 부족 신호)")
 
 

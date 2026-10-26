@@ -38,6 +38,10 @@ def test_kernels_match_python():
     a0 = Kn.propensities(X.reshape(-1), src, const, susc, region, lam, a)
     np.testing.assert_allclose(a, sysm.propensities(X, 1.0), rtol=1e-13)
     assert a0 == pytest.approx(a.sum(), rel=1e-13)
+    m = np.empty(K)
+    m0 = Kn.mobility_propensities(X.reshape(-1), K, ncomp, alive_end, sysm.mobility.out_rate, m)
+    np.testing.assert_allclose(m, sysm.mobility_propensities(X), rtol=1e-13)
+    assert m0 == pytest.approx(m.sum(), rel=1e-13)
 
 
 def test_reproducible_conservative_integer_paths():
@@ -67,18 +71,28 @@ def _linear_moments(sysm, X0, times):
       dm/dt = A m,   dSigma/dt = A Sigma + Sigma A^T + sum_j nu_j nu_j^T k_j m[src_j]
     """
     n = X0.size
-    ch = sysm.channels
+    ch, L, om = sysm.channels, sysm.layout, sysm.regions.mobility
+    # 이동은 합치지 않은 원래 형태 (i, j, c) 로 따로 넣는다 -> CTMC 의 합친 이동과 독립적인 기준
+    src = list(ch.src)
+    dst = list(ch.dst)
+    k = list(ch.const)
+    for i, j in zip(*np.nonzero(om)):
+        for c in range(L.D):
+            src.append(i * L.ncomp + c)
+            dst.append(j * L.ncomp + c)
+            k.append(om[i, j])
+    src, dst, k = np.array(src), np.array(dst), np.array(k)
     Amat = np.zeros((n, n))
-    for j in range(len(ch)):
-        Amat[ch.dst[j], ch.src[j]] += ch.const[j]
-        Amat[ch.src[j], ch.src[j]] -= ch.const[j]
+    for j in range(src.size):
+        Amat[dst[j], src[j]] += k[j]
+        Amat[src[j], src[j]] -= k[j]
 
     def rhs(t, y):
         m, S = y[:n], y[n:].reshape(n, n)
         B = np.zeros((n, n))
-        rates = ch.const * m[ch.src]
-        for j in range(len(ch)):
-            s_, d_ = ch.src[j], ch.dst[j]
+        rates = k * m[src]
+        for j in range(src.size):
+            s_, d_ = src[j], dst[j]
             B[s_, s_] += rates[j]
             B[d_, d_] += rates[j]
             B[s_, d_] -= rates[j]

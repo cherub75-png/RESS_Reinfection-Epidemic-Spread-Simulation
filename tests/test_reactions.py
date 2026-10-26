@@ -91,14 +91,35 @@ def test_reinfection_channel_indices(M):
     assert ch.dst[j] == L.E(M)
 
 
-def test_channel_count():
+def test_channel_count_and_mobility_structure():
     sysm, _ = _system(5, 4, seed=1)
     K, M = 5, 4
-    nnz = np.count_nonzero(sysm.regions.mobility)
-    assert len(sysm.channels) == K * (1 + 2 * M + 4 * M) + nnz * (4 * M + 1)
-    # 이동 사건은 D 를 옮기지 않는다
-    mv = sysm.channels.kind == R.MOVE
-    assert not np.any(sysm.channels.src[mv] % sysm.layout.ncomp == sysm.layout.D)
+    assert len(sysm.channels) == K * (1 + 2 * M + 4 * M)
+    mb = sysm.mobility
+    om = sysm.regions.mobility
+    np.testing.assert_allclose(mb.out_rate, om.sum(axis=1))
+    for i in range(K):
+        js = mb.indices[mb.indptr[i]:mb.indptr[i + 1]]
+        np.testing.assert_array_equal(js, np.flatnonzero(om[i] > 0))
+        probs = np.diff(np.concatenate([[0.0], mb.cumprob[mb.indptr[i]:mb.indptr[i + 1]]]))
+        np.testing.assert_allclose(probs, om[i, js] / om[i].sum(), rtol=1e-12)
+
+
+def test_mobility_drift_matches_pairwise_sum():
+    """합친 이동 drift = (i, j, c) 쌍마다 omega_ij X_ic 를 옮기는 원래 식. D 는 움직이지 않는다."""
+    sysm, rng = _system(4, 3, seed=5)
+    L = sysm.layout
+    X = random_state(L, rng)
+    om = sysm.regions.mobility
+    ref = np.zeros_like(X)
+    for i in range(4):
+        for j in range(4):
+            for c in range(L.D):
+                ref[i, c] -= om[i, j] * X[i, c]
+                ref[j, c] += om[i, j] * X[i, c]
+    np.testing.assert_allclose(sysm.mobility_drift(X), ref, rtol=1e-12, atol=1e-9)
+    assert np.all(sysm.mobility_drift(X)[:, L.D] == 0)
+    np.testing.assert_allclose(sysm.mobility_propensities(X), om.sum(axis=1) * L.alive(X))
 
 
 def test_force_of_infection_handles_empty_region():
