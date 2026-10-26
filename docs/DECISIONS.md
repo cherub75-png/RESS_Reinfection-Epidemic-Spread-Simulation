@@ -1,0 +1,44 @@
+# 결정 기록
+
+사용자 승인 결정과, 자율 진행 중 제가 내린 판단을 근거와 함께 남깁니다.
+**[자율]** 표시는 사용자 확인이 필요한 항목입니다. 방정식(지시서 1절)은 어느 결정으로도 바뀌지 않았습니다.
+
+| ID | 날짜 | 결정 | 출처 |
+|---|---|---|---|
+| D-001 | 1-B | R0 기준 기본 network, reference 도 함께 기록 | 사용자 |
+| D-002 | 1-C | M 기본 8, 마지막 칸 I 점유율 경고 5% | 사용자 |
+| D-003 | 1-C | 이동 사건 합치기 (분포 동일), 이항 tau-leaping | 사용자 |
+| D-004 | 1-C 2b | SDE 음수 처리 기본값을 `flow_limit` 으로 정함 (승인했던 `increment_clip` 대신) | **[자율]** |
+| D-005 | 1-C 2b | tau-leap eps 기본 0.01 | 사용자 |
+| D-006 | 1-D | 차단된 자료 서버는 우회하지 않고, 받을 수 없는 자료는 "미확보"로 둔다 | **[자율]** (아래) |
+
+## D-004 SDE 음수 처리: `flow_limit` 기본 [자율, 확인 필요]
+
+**문제.** 1-C 에서 승인한 사건 단위 절단(`increment_clip`: 증분 < 0 이면 0)은 다음 편향을 만든다.
+
+  E[max(0, μ + √μ ξ)] − μ ≈ √μ/√(2π)   (μ = a h 가 작을 때)
+
+단위 시간당 편향은 √(a/(2π h)) 이므로 h → 0 일 때 **발산**한다. 인원이 적은 구획(높은 감염 횟수 칸, 초기의 E·I)에서 크게 나타난다.
+
+**증거** (N = 2e4, 전체 모형, 각 300회, CTMC 와 I_total 평균 비교 z 값)
+
+| 방식 | h = 0.05 | h = 0.01 | 보존 |
+|---|---|---|---|
+| increment_clip (승인안 b) | −7.6 ~ +34 | −17 ~ +98 | 정확 |
+| state_clip (지시서 1.5 원안) | −1.4 ~ +2.7 | −2.1 ~ +3.2 | 인구 +0.3% |
+| **flow_limit (기본으로 채택)** | **−1.9 ~ +1.4** | **−1.1 ~ +1.5** | 정확 (1e-14) |
+
+**flow_limit 동작.** 증분의 부호를 그대로 둔다(음수 = 역방향 흐름). 어떤 구획이 음수가 될 때만, 그 구획에서 나가는 흐름을 비례로 줄여 0 에 맞춘다. 수정은 0 에 닿는 구획에서만 일어난다 (나가는 흐름 대비 줄인 양 약 3e-4).
+
+**변경 범위.** 수치 해법만 바뀌었고 방정식은 그대로다. 세 방식 모두 `truncation=` 인자로 선택할 수 있다. 테스트 `test_sde_distribution_matches_ctmc_and_increment_clip_is_biased` 가 이 결론을 회귀 검사한다.
+
+**사용자 확인 요청.** flow_limit 을 기본으로 유지할지 확인해 주세요.
+
+## D-006 자료 서버 차단 [자율]
+
+이 클라우드 환경의 네트워크 정책이 naciscdn.org(Natural Earth), www.geoboundaries.org, geodata.ucdavis.edu(WorldClim), data.worldpop.org / hub.worldpop.org(WorldPop), sedac.ciesin.columbia.edu(GPW) 를 403 으로 막는다. 허용되는 곳은 GitHub(raw.githubusercontent.com)와 PyPI 이다.
+
+- 정책 우회는 하지 않는다.
+- 같은 자료의 공식 배포처가 GitHub 에 있으면(예: Natural Earth 공식 저장소 nvkelso/natural-earth-vector, OpenFlights 공식 저장소) 출처를 그대로 기록하고 사용한다.
+- 그 밖의 자료는 "미확보" 로 표시한다. 합성 자료로 대신하지 않는다 (코드 검증용 합성 자료는 항상 synthetic=True 로 구분).
+- 해결 방법: 환경 설정 → Network access 에서 위 도메인을 Allowed domains 에 추가 (https://code.claude.com/docs/en/cloud-environments#network-access), 또는 파일을 직접 제공.

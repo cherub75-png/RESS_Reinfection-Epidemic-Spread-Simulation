@@ -158,6 +158,17 @@ g 의 기본 상태는 `status: neutral_default` (g = 1) 이다. "환경 효과�
 - τ 는 Cao-Gillespie-Petzold (2006) 방식이다 (g = 2, ε = 0.03).
 - 사건별 마스크(ch_mask, mob_mask)는 하이브리드(2b)에서 쓴다.
 
+### 6.3 SDE (화학 랑주뱅, Euler-Maruyama)
+
+`seir_sim/simulate/sde.py` 머리말을 참고한다.
+- 이동 잡음은 (i, j, c) 쌍마다 독립이다.
+- 음수 처리 기본값은 `flow_limit` 이다 (docs/DECISIONS.md D-004). 승인안이었던 `increment_clip` 은 dt → 0 에서 편향이 발산함을 확인했다.
+- 검증
+  - 선형계에서 EM 모멘트 점화식과 일치, O(h) 수렴
+  - N = 2e4 에서 CTMC 와 분포 일치
+  - N = 1e7 에서 ODE 와 1% 이내
+  - 보존 오차 1e-14
+
 ## 7. 매개변수 단위
 
 `seir_sim/model/params.py` 머리말의 표를 참고한다. 율은 모두 1/일이다. 초기 값은 COVID 유사 **코드 검증용 가정**이며, 실제 COVID-19 에 맞춘 추정치가 아니다.
