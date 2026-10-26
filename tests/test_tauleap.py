@@ -133,7 +133,8 @@ def test_leap_mean_converges_to_exact_mean_first_order():
 # --------------------------------------------------------------------- 비선형: CTMC 와 분포 비교
 
 def test_tau_leap_distribution_matches_ctmc():
-    """검증: 전체 모형(재감염, 사망, M = 8)에서 tau-leap(eps = 0.03)의 I_total 분포가 CTMC 와 같다.
+    """검증: 전체 모형(재감염, 사망, M = 8)에서 tau-leap(기본 eps = 0.01)의 I_total 분포가 CTMC 와 같다.
+    (eps = 0.03 에서는 후반부 z 가 +2.7~4.2 로 체계적 편향이 보여 기본값을 0.01 로 바꿨다. docs/reports/1C_tau.md 5절)
     N = 2e4, 초기 1%, 200일, 각 300회. 20일마다 평균은 두 표본 z < 5, 표준편차 비율은 [0.8, 1.25].
     한계: 소규모 수 영역(소멸)의 정확도는 여기서 보지 않는다. 하이브리드에서 CTMC 가 맡는다."""
     N = 2e4

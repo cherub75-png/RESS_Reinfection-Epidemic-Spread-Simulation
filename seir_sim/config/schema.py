@@ -165,7 +165,7 @@ class Simulation(Strict):
     seed: int = 20260101
     n_workers: int = Field(1, ge=1)
     hybrid: Hybrid = Field(default_factory=Hybrid)
-    tau_leap_epsilon: Num = Field(0.03, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차")
+    tau_leap_epsilon: Num = Field(0.01, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차 (1-C: 0.03 은 약 1% 편향 -> 0.01)")
     sde_dt: Num = Field(0.05, gt=0)
     ode: OdeSolver = Field(default_factory=OdeSolver)
     last_bin_warn: Num = Field(0.05, gt=0, le=1,

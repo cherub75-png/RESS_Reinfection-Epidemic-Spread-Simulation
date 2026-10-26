@@ -12,7 +12,7 @@
 tau 선택 (Cao, Gillespie & Petzold 2006):
   tau = min_s { max(eps x_s / g, 1) / |mu_s|,  max(eps x_s / g, 1)^2 / sigma2_s }
   mu_s = sum_j nu_sj a_j (이동 포함),  sigma2_s = sum_j nu_sj^2 a_j,  g = 2 (모든 구획에 보수적으로 적용)
-그다음 tau_max, 출력 시각, g/u 변화 시각으로 자른다.
+그다음 tau_max, 출력 시각, g/u 변화 시각으로 자른다. 기본 eps = 0.01 (1-C: 0.03 은 CTMC 대비 약 1% 체계적 편향).
 
 난수: numba 내부 난수 생성기를 SeedSequence 에서 만든 32비트 시드로 매 실행 초기화한다 (meta 에 기록).
 """
@@ -206,7 +206,7 @@ def seed_from(seed) -> tuple[int, dict]:
 
 
 def simulate_tau(system: ReactionSystem, X0: np.ndarray, days: float, output_dt: float = 1.0,
-                 seed=None, eps: float = 0.03, tau_max: float = 1.0, t0: float = 0.0,
+                 seed=None, eps: float = 0.01, tau_max: float = 1.0, t0: float = 0.0,
                  last_bin_warn: float = DEFAULT_LAST_BIN_WARN) -> Trajectory:
     if not np.allclose(X0, np.round(X0)) or np.any(X0 < 0):
         raise ValueError("tau-leaping 초기 상태는 음이 아닌 정수여야 한다")
