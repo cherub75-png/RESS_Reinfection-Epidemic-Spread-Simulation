@@ -10,9 +10,12 @@ early_stopping 은 끈다 (무작위 검증 분할을 쓰지 않기 위함).
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
+from threadpoolctl import threadpool_limits
 
 from ..forecast.metrics import QUANTILES
 from .features import FEATURES
@@ -26,12 +29,20 @@ MIN_HYBRID_ROWS = 150
 HYBRID_EXTRA = ["seir_dlog", "seir_logwidth"]
 
 
+# OpenMP 스레드 수 (기본 1). 다른 계산과 CPU 를 나눠 쓸 때 스레드가 과다하면 학습이 수십 배 느려진다 (9단계 측정).
+# 한가한 컴퓨터에서 한 작업만 돌릴 때는 SEIR_SIM_ML_THREADS 로 늘릴 수 있다 (random_state 고정; 스레드 수에 따라
+# 부동소수 합산 순서가 달라 아주 작은 차이는 날 수 있다).
+ML_THREADS = int(os.environ.get("SEIR_SIM_ML_THREADS", "1"))
+
+
 def fit_quantile_models(X: pd.DataFrame, y: np.ndarray, params: dict, quantiles=QUANTILES):
-    return [HistGradientBoostingRegressor(loss="quantile", quantile=float(q), **params).fit(X, y) for q in quantiles]
+    with threadpool_limits(limits=ML_THREADS, user_api="openmp"):
+        return [HistGradientBoostingRegressor(loss="quantile", quantile=float(q), **params).fit(X, y) for q in quantiles]
 
 
 def predict_quantiles(models, X: pd.DataFrame) -> np.ndarray:
-    P = np.column_stack([m.predict(X) for m in models])
+    with threadpool_limits(limits=ML_THREADS, user_api="openmp"):
+        P = np.column_stack([m.predict(X) for m in models])
     return np.sort(P, axis=1)
 
 
