@@ -83,7 +83,7 @@ class ScenarioRequest(BaseModel):
     climate_T_ref: float = Field(15.0, ge=-40, le=50)
     climate_H_ref: float = Field(60.0, ge=0, le=100)
     eta: float = Field(0.2, ge=0, le=2)                                    # h(rho) = (rho/rho_ref)^eta
-    tau_leap_epsilon: float = Field(0.01, ge=0.0005, le=0.1)
+    tau_leap_epsilon: float = Field(0.003, ge=0.0005, le=0.1)        # D-007
     sde_dt: float = Field(0.05, ge=0.001, le=1)
     hybrid_up: float = Field(100, ge=2, le=1e6)
     hybrid_down: float = Field(50, ge=1, le=1e6)

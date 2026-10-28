@@ -43,6 +43,9 @@ simulation:
   days: 365
   output_dt: 1.0
   method: hybrid
+  # D-007: 여러 지역 모형(M3)에서는 하이브리드가 eps 0.01 에서도 선택 규칙을 통과했다. 전 세계 실행 시간 때문에 0.01 을 쓴다.
+  # 최종 규모·누적 사망을 정밀하게 볼 때는 0.003 (기본값) 을 쓴다.
+  tau_leap_epsilon: 0.01
   n_runs: 100
   seed: 20260101
 datasets:

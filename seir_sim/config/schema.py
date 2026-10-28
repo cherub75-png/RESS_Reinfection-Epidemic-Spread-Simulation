@@ -180,7 +180,8 @@ class Simulation(Strict):
     seed: int = 20260101
     n_workers: int = Field(1, ge=1)
     hybrid: Hybrid = Field(default_factory=Hybrid)
-    tau_leap_epsilon: Num = Field(0.01, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차 (1-C: 0.03 은 약 1% 편향 -> 0.01)")
+    tau_leap_epsilon: Num = Field(0.003, gt=0, description="Cao-Gillespie-Petzold tau 선택 허용 오차. 기본 0.003: D-007 실험에서 "
+                                  "하이브리드가 세 모형 모두 선택 규칙(|z|<3, 편향<0.5%)을 통과한 값 (docs/reports/D007_D004.md)")
     sde_dt: Num = Field(0.05, gt=0)
     ode: OdeSolver = Field(default_factory=OdeSolver)
     last_bin_warn: Num = Field(0.05, gt=0, le=1,

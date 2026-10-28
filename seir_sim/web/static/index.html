@@ -125,10 +125,10 @@
         <label>실행 횟수 <input type="number" name="n_runs" value="20" min="1" max="500"></label>
         <label>작업자 수 <input type="number" name="n_workers" value="1" min="1" max="4"></label>
         <label>난수 시드 <input type="number" name="seed" value="20260101" min="0"></label>
-        <label>tau-leap ε <input type="number" name="tau_leap_epsilon" value="0.01" step="0.001" min="0.0005" max="0.1"></label>
+        <label>tau-leap ε <input type="number" name="tau_leap_epsilon" value="0.003" step="any" min="0.0005" max="0.1"></label>
         <label>SDE 시간 간격 (일) <input type="number" name="sde_dt" value="0.05" step="0.01" min="0.001" max="1"></label>
         <label>하이브리드 전환 (올림 / 내림) <span class="flex"><input type="number" name="hybrid_up" value="100" min="2"><input type="number" name="hybrid_down" value="50" min="1"></span></label>
-        <p class="note">ε 가 작을수록 정확하고 느리다 (최종 규모 같은 누적 지표는 0.003 권장, 검증: 데이터 관리 아래 보고서 D007_D004).</p>
+        <p class="note">ε 가 작을수록 정확하고 느리다. 기본 0.003 은 조건별 실험(docs/reports/D007_D004.md)에서 하이브리드가 모든 시험 모형에서 CTMC 와 일치한 값이다. 여러 지역 모형은 0.01 도 통과했다.</p>
       </fieldset></details>
 
       <div class="flex" style="margin-top:8px">
