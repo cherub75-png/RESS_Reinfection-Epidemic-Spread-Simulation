@@ -1,0 +1,2909 @@
+{
+ "countries": {
+  "KOR": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.01576182136602452,
+    "reporting_days_per_week": 6.89,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14501779359430605,
+    "weekday_ratio": {
+     "Mon": 0.949,
+     "Tue": 1.136,
+     "Wed": 1.088,
+     "Thu": 1.056,
+     "Fri": 1.021,
+     "Sat": 0.961,
+     "Sun": 0.738
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2020-02-20",
+     "2020-02-21",
+     "2020-02-22",
+     "2020-02-23",
+     "2020-02-24",
+     "2020-02-25",
+     "2020-02-26",
+     "2020-02-27"
+    ],
+    "total": 30615521.0,
+    "max": 621317.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.1042031523642732,
+    "reporting_days_per_week": 6.27,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1466275659824047,
+    "weekday_ratio": {
+     "Mon": 0.867,
+     "Tue": 0.983,
+     "Wed": 1.138,
+     "Thu": 1.152,
+     "Fri": 1.083,
+     "Sat": 0.967,
+     "Sun": 0.795
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 34093.0,
+    "max": 470.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8859020310633214,
+    "reporting_days_per_week": 0.8,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 10,
+    "spike_dates": [
+     "2020-03-08",
+     "2020-03-15",
+     "2020-03-22",
+     "2022-02-13",
+     "2022-02-20",
+     "2022-02-27",
+     "2022-03-06",
+     "2022-03-13",
+     "2022-03-20",
+     "2022-03-27"
+    ],
+    "total": 34571873.0,
+    "max": 2716348.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8936678614097969,
+    "reporting_days_per_week": 0.74,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 35934.0,
+    "max": 2429.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-13",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.03242147922998987,
+    "reporting_days_per_week": 6.77,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14554973821989528,
+    "weekday_ratio": {
+     "Mon": 1.134,
+     "Tue": 1.079,
+     "Wed": 1.041,
+     "Thu": 1.054,
+     "Fri": 0.963,
+     "Sat": 0.772,
+     "Sun": 0.903
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2020-02-17",
+     "2020-02-19",
+     "2020-02-20",
+     "2020-02-21",
+     "2020-02-22",
+     "2020-02-23",
+     "2020-02-24",
+     "2020-02-25"
+    ],
+    "total": 24264470.0,
+    "max": 621328.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 966,
+    "first": "2020-01-22",
+    "last": "2022-09-13",
+    "median_rel_diff": 0.005414922685292147,
+    "max_rel_diff": 0.8012820512820513,
+    "last_a": 24099134.0,
+    "last_b": 24264470.0,
+    "last_rel_diff": 0.006813913512225901
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.013399356862435636,
+    "max_rel_diff": 0.930715935334873,
+    "last_a": 30615522.0,
+    "last_b": 30564915.0,
+    "last_rel_diff": 0.0016529850446450006
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 1,
+    "corr_at_best": 0.9973270486600557,
+    "corr_lag0": 0.9508917996697843,
+    "exact_match_frac_at_best": 0.474120082815735
+   },
+   "hosp_patients_days": 134,
+   "icu_patients_days": 1066,
+   "new_tests_days": 859,
+   "people_vaccinated_first": "2021-02-26",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 51815808.0,
+   "population_gc": 51269183.0
+  },
+  "JPN": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.008756567425569177,
+    "reporting_days_per_week": 6.94,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1439929328621908,
+    "weekday_ratio": {
+     "Mon": 0.625,
+     "Tue": 0.977,
+     "Wed": 1.114,
+     "Thu": 1.134,
+     "Fri": 1.09,
+     "Sat": 1.095,
+     "Sun": 0.918
+    },
+    "n_spikes": 3,
+    "spike_dates": [
+     "2022-01-07",
+     "2022-01-08",
+     "2022-01-09"
+    ],
+    "total": 33320436.0,
+    "max": 260999.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -10.0,
+    "zero_frac": 0.06654991243432574,
+    "reporting_days_per_week": 6.53,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14835680751173708,
+    "weekday_ratio": {
+     "Mon": 0.809,
+     "Tue": 1.163,
+     "Wed": 1.159,
+     "Thu": 1.108,
+     "Fri": 1.108,
+     "Sat": 0.94,
+     "Sun": 0.694
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 72997.0,
+    "max": 503.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8960573476702509,
+    "reporting_days_per_week": 0.73,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 18,
+    "spike_dates": [
+     "2020-03-08",
+     "2020-03-15",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-08-02",
+     "2020-08-09",
+     "2020-08-16"
+    ],
+    "total": 33803572.0,
+    "max": 1496968.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.9014336917562724,
+    "reporting_days_per_week": 0.69,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 9,
+    "spike_dates": [
+     "2020-04-26",
+     "2022-01-30",
+     "2022-02-06",
+     "2022-02-13",
+     "2022-02-20",
+     "2022-02-27",
+     "2022-03-06",
+     "2022-03-13",
+     "2023-02-05"
+    ],
+    "total": 74694.0,
+    "max": 10981.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-14",
+    "n_days": 988,
+    "n_valid": 988,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.02834008097165992,
+    "reporting_days_per_week": 6.8,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14375,
+    "weekday_ratio": {
+     "Mon": 0.602,
+     "Tue": 1.022,
+     "Wed": 1.112,
+     "Thu": 1.137,
+     "Fri": 1.101,
+     "Sat": 1.098,
+     "Sun": 0.878
+    },
+    "n_spikes": 4,
+    "spike_dates": [
+     "2022-01-06",
+     "2022-01-07",
+     "2022-01-08",
+     "2022-01-09"
+    ],
+    "total": 19818756.0,
+    "max": 268367.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 967,
+    "first": "2020-01-22",
+    "last": "2022-09-14",
+    "median_rel_diff": 0.032336982355121904,
+    "max_rel_diff": 0.9931450333227547,
+    "last_a": 20414288.0,
+    "last_b": 19803009.0,
+    "last_rel_diff": 0.029943684540945047
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.016076497442672703,
+    "max_rel_diff": 0.85,
+    "last_a": 33320438.0,
+    "last_b": 33251497.0,
+    "last_rel_diff": 0.002069030425110258
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.9840120309406769,
+    "corr_lag0": 0.9840120309406769,
+    "exact_match_frac_at_best": 0.035196687370600416
+   },
+   "hosp_patients_days": 204,
+   "icu_patients_days": 203,
+   "new_tests_days": 866,
+   "people_vaccinated_first": "2021-02-17",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 123951696.0,
+   "population_gc": 126476458.0
+  },
+  "NZL": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 4,
+    "negative_sum": -5.0,
+    "zero_frac": 0.24605954465849386,
+    "reporting_days_per_week": 5.28,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1516919486581097,
+    "weekday_ratio": {
+     "Mon": 1.112,
+     "Tue": 0.884,
+     "Wed": 0.781,
+     "Thu": 0.79,
+     "Fri": 0.701,
+     "Sat": 0.645,
+     "Sun": 2.152
+    },
+    "n_spikes": 26,
+    "spike_dates": [
+     "2020-03-22",
+     "2020-03-24",
+     "2020-03-25",
+     "2020-03-26",
+     "2020-03-27",
+     "2020-08-12",
+     "2022-02-28",
+     "2022-10-16",
+     "2022-10-24",
+     "2022-10-30"
+    ],
+    "total": 2236114.0,
+    "max": 42699.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -17.0,
+    "zero_frac": 0.9045534150612959,
+    "reporting_days_per_week": 0.67,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.6111111111111112,
+    "weekday_ratio": {
+     "Mon": 0.988,
+     "Tue": 0.354,
+     "Wed": 0.471,
+     "Thu": 0.228,
+     "Fri": 0.393,
+     "Sat": 0.0,
+     "Sun": 4.533
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2022-02-20",
+     "2022-02-27",
+     "2022-03-06",
+     "2022-03-13",
+     "2022-03-20",
+     "2022-03-27",
+     "2022-04-03",
+     "2022-04-10"
+    ],
+    "total": 2550.0,
+    "max": 124.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8679808841099164,
+    "reporting_days_per_week": 0.92,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 10,
+    "spike_dates": [
+     "2021-08-29",
+     "2021-09-05",
+     "2022-02-20",
+     "2022-02-27",
+     "2022-03-06",
+     "2022-03-13",
+     "2022-03-20",
+     "2022-03-27",
+     "2022-04-03",
+     "2024-03-31"
+    ],
+    "total": 2639048.0,
+    "max": 140787.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.9283154121863799,
+    "reporting_days_per_week": 0.5,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 7,
+    "spike_dates": [
+     "2022-03-13",
+     "2022-03-20",
+     "2022-03-27",
+     "2022-04-03",
+     "2022-04-10",
+     "2022-04-17",
+     "2022-04-24"
+    ],
+    "total": 4284.0,
+    "max": 236.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-02",
+    "last_date": "2022-09-14",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.13576494427558258,
+    "reporting_days_per_week": 6.05,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14536928487690504,
+    "weekday_ratio": {
+     "Mon": 0.965,
+     "Tue": 1.075,
+     "Wed": 1.076,
+     "Thu": 1.025,
+     "Fri": 0.922,
+     "Sat": 0.931,
+     "Sun": 0.955
+    },
+    "n_spikes": 7,
+    "spike_dates": [
+     "2020-03-17",
+     "2020-03-19",
+     "2020-03-20",
+     "2020-03-21",
+     "2020-03-22",
+     "2020-03-23",
+     "2020-10-20"
+    ],
+    "total": 1746283.0,
+    "max": 23937.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 967,
+    "first": "2020-01-22",
+    "last": "2022-09-14",
+    "median_rel_diff": 0.004038501266703635,
+    "max_rel_diff": 1.0,
+    "last_a": 1768592.0,
+    "last_b": 1745181.0,
+    "last_rel_diff": 0.013237083510498748
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.12957589662393082,
+    "max_rel_diff": 1.0,
+    "last_a": 2236114.0,
+    "last_b": 2166470.0,
+    "last_rel_diff": 0.031145102619991646
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.8875845808006614,
+    "corr_lag0": 0.8875845808006614,
+    "exact_match_frac_at_best": 0.2370600414078675
+   },
+   "hosp_patients_days": 0,
+   "icu_patients_days": 0,
+   "new_tests_days": 511,
+   "people_vaccinated_first": "2021-02-14",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 5185289.0,
+   "population_gc": 4822233.0
+  },
+  "AUS": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 3,
+    "negative_sum": -29649.0,
+    "zero_frac": 0.06654991243432574,
+    "reporting_days_per_week": 6.53,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1495766698024459,
+    "weekday_ratio": {
+     "Mon": 0.814,
+     "Tue": 0.918,
+     "Wed": 0.903,
+     "Thu": 1.771,
+     "Fri": 0.948,
+     "Sat": 0.833,
+     "Sun": 0.788
+    },
+    "n_spikes": 17,
+    "spike_dates": [
+     "2020-03-13",
+     "2022-09-22",
+     "2022-09-29",
+     "2022-10-06",
+     "2022-10-13",
+     "2022-10-20",
+     "2022-10-27",
+     "2022-11-03",
+     "2022-11-10",
+     "2022-11-17"
+    ],
+    "total": 11399460.0,
+    "max": 175271.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 5,
+    "negative_sum": -12.0,
+    "zero_frac": 0.4203152364273205,
+    "reporting_days_per_week": 4.06,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1567732115677321,
+    "weekday_ratio": {
+     "Mon": 0.844,
+     "Tue": 0.897,
+     "Wed": 0.948,
+     "Thu": 2.292,
+     "Fri": 1.205,
+     "Sat": 0.455,
+     "Sun": 0.353
+    },
+    "n_spikes": 4,
+    "spike_dates": [
+     "2022-04-01",
+     "2022-09-29",
+     "2023-01-19",
+     "2023-01-26"
+    ],
+    "total": 19574.0,
+    "max": 504.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8661887694145759,
+    "reporting_days_per_week": 0.94,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 21,
+    "spike_dates": [
+     "2020-03-22",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-07-19",
+     "2020-07-26",
+     "2020-08-02",
+     "2020-08-09",
+     "2020-08-16",
+     "2021-08-01"
+    ],
+    "total": 11861161.0,
+    "max": 588813.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1673,
+    "missing_frac": 0.0005973715651135006,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8918111177525403,
+    "reporting_days_per_week": 0.76,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 7,
+    "spike_dates": [
+     "2020-08-16",
+     "2021-08-08",
+     "2021-08-15",
+     "2021-08-22",
+     "2021-09-05",
+     "2021-09-12",
+     "2021-09-19"
+    ],
+    "total": 25312.0,
+    "max": 1161.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-16",
+    "n_days": 990,
+    "n_valid": 990,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.048484848484848485,
+    "reporting_days_per_week": 6.66,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14437367303609341,
+    "weekday_ratio": {
+     "Mon": 0.887,
+     "Tue": 0.991,
+     "Wed": 1.051,
+     "Thu": 1.092,
+     "Fri": 1.04,
+     "Sat": 0.985,
+     "Sun": 0.901
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 10202506.0,
+    "max": 150702.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 969,
+    "first": "2020-01-22",
+    "last": "2022-09-16",
+    "median_rel_diff": 0.004956467393183205,
+    "max_rel_diff": 1.0,
+    "last_a": 10157316.0,
+    "last_b": 10124671.0,
+    "last_rel_diff": 0.0032139395879777688
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.02999587994785666,
+    "max_rel_diff": 0.7675070028011205,
+    "last_a": 11399460.0,
+    "last_b": 11061493.0,
+    "last_rel_diff": 0.029647632431711677
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": -1,
+    "corr_at_best": 0.9822444754243611,
+    "corr_lag0": 0.9624192355579737,
+    "exact_match_frac_at_best": 0.1313340227507756
+   },
+   "hosp_patients_days": 1347,
+   "icu_patients_days": 1347,
+   "new_tests_days": 837,
+   "people_vaccinated_first": "2021-02-21",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 985,
+   "gc_mobility_days": 940,
+   "population_owid": 26177410.0,
+   "population_gc": 25499881.0
+  },
+  "GBR": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 3,
+    "negative_sum": -11159.0,
+    "zero_frac": 0.24080560420315236,
+    "reporting_days_per_week": 5.31,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1736111111111111,
+    "weekday_ratio": {
+     "Mon": 0.94,
+     "Tue": 0.804,
+     "Wed": 1.202,
+     "Thu": 2.011,
+     "Fri": 0.78,
+     "Sat": 0.632,
+     "Sun": 0.603
+    },
+    "n_spikes": 6,
+    "spike_dates": [
+     "2020-02-28",
+     "2020-03-01",
+     "2020-03-02",
+     "2020-03-03",
+     "2020-03-04",
+     "2020-03-06"
+    ],
+    "total": 24425309.0,
+    "max": 847371.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.05691768826619965,
+    "reporting_days_per_week": 6.6,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14391829155060354,
+    "weekday_ratio": {
+     "Mon": 0.994,
+     "Tue": 1.023,
+     "Wed": 1.006,
+     "Thu": 1.013,
+     "Fri": 1.012,
+     "Sat": 0.96,
+     "Sun": 0.967
+    },
+    "n_spikes": 5,
+    "spike_dates": [
+     "2020-03-14",
+     "2020-03-15",
+     "2020-03-16",
+     "2020-03-17",
+     "2020-03-18"
+    ],
+    "total": 219948.0,
+    "max": 1490.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8590203106332138,
+    "reporting_days_per_week": 0.99,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 13,
+    "spike_dates": [
+     "2020-03-22",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-05-03",
+     "2020-10-04",
+     "2020-10-11",
+     "2020-10-18"
+    ],
+    "total": 24974629.0,
+    "max": 1320332.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8847072879330944,
+    "reporting_days_per_week": 0.81,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-05-03",
+     "2020-11-01",
+     "2020-11-08",
+     "2020-11-15"
+    ],
+    "total": 232112.0,
+    "max": 9723.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-13",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.047619047619047616,
+    "reporting_days_per_week": 6.67,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14468085106382977,
+    "weekday_ratio": {
+     "Mon": 1.151,
+     "Tue": 1.119,
+     "Wed": 1.111,
+     "Thu": 1.03,
+     "Fri": 0.934,
+     "Sat": 0.771,
+     "Sun": 0.835
+    },
+    "n_spikes": 4,
+    "spike_dates": [
+     "2020-03-02",
+     "2020-03-03",
+     "2020-03-04",
+     "2020-03-06"
+    ],
+    "total": 23554519.0,
+    "max": 275647.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 966,
+    "first": "2020-01-22",
+    "last": "2022-09-13",
+    "median_rel_diff": 0.019361760740996506,
+    "max_rel_diff": 1.0,
+    "last_a": 23554519.0,
+    "last_b": 23554971.0,
+    "last_rel_diff": 1.918915544408864e-05
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.008378679707253693,
+    "max_rel_diff": 1.0,
+    "last_a": 24425309.0,
+    "last_b": 24411693.0,
+    "last_rel_diff": 0.0005574545648532021
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.7303525269054366,
+    "corr_lag0": 0.7303525269054366,
+    "exact_match_frac_at_best": 0.031088082901554404
+   },
+   "hosp_patients_days": 1198,
+   "icu_patients_days": 781,
+   "new_tests_days": 776,
+   "people_vaccinated_first": "2021-01-10",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 985,
+   "gc_mobility_days": 940,
+   "population_owid": 67508936.0,
+   "population_gc": 66647112.0
+  },
+  "DEU": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.18563922942206654,
+    "reporting_days_per_week": 5.7,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.17096774193548386,
+    "weekday_ratio": {
+     "Mon": 1.177,
+     "Tue": 1.038,
+     "Wed": 1.265,
+     "Thu": 1.363,
+     "Fri": 1.198,
+     "Sat": 0.538,
+     "Sun": 0.382
+    },
+    "n_spikes": 7,
+    "spike_dates": [
+     "2020-02-28",
+     "2020-03-01",
+     "2020-03-02",
+     "2020-03-03",
+     "2020-03-04",
+     "2020-03-05",
+     "2020-03-06"
+    ],
+    "total": 38249060.0,
+    "max": 484345.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 3,
+    "negative_sum": -9.0,
+    "zero_frac": 0.2136602451838879,
+    "reporting_days_per_week": 5.5,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.17430167597765364,
+    "weekday_ratio": {
+     "Mon": 0.953,
+     "Tue": 1.343,
+     "Wed": 1.482,
+     "Thu": 1.376,
+     "Fri": 1.203,
+     "Sat": 0.435,
+     "Sun": 0.203
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 168935.0,
+    "max": 1244.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2023-07-09",
+    "n_days": 1282,
+    "n_valid": 1282,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.858814352574103,
+    "reporting_days_per_week": 0.99,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 11,
+    "spike_dates": [
+     "2020-03-08",
+     "2020-03-15",
+     "2020-03-22",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-11-01",
+     "2020-11-08"
+    ],
+    "total": 38437756.0,
+    "max": 1588891.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2023-07-09",
+    "n_days": 1282,
+    "n_valid": 1282,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8603744149765991,
+    "reporting_days_per_week": 0.98,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 14,
+    "spike_dates": [
+     "2020-03-22",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-10-18",
+     "2020-10-25",
+     "2020-11-01",
+     "2020-11-08"
+    ],
+    "total": 174979.0,
+    "max": 6460.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-13",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.03546099290780142,
+    "reporting_days_per_week": 6.75,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14495798319327732,
+    "weekday_ratio": {
+     "Mon": 1.299,
+     "Tue": 1.341,
+     "Wed": 1.22,
+     "Thu": 1.119,
+     "Fri": 0.727,
+     "Sat": 0.383,
+     "Sun": 0.868
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2020-02-26",
+     "2020-02-27",
+     "2020-02-28",
+     "2020-02-29",
+     "2020-03-01",
+     "2020-03-02",
+     "2020-03-03",
+     "2020-03-04"
+    ],
+    "total": 32604993.0,
+    "max": 307873.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 966,
+    "first": "2020-01-22",
+    "last": "2022-09-13",
+    "median_rel_diff": 0.012663632191568549,
+    "max_rel_diff": 1.0,
+    "last_a": 32507180.0,
+    "last_b": 32604993.0,
+    "last_rel_diff": 0.0029999393037747316
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.006058593123668598,
+    "max_rel_diff": 1.0,
+    "last_a": 38249060.0,
+    "last_b": 38217516.0,
+    "last_rel_diff": 0.0008247000056994865
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 1,
+    "corr_at_best": 0.863121364132126,
+    "corr_lag0": 0.8190970228932625,
+    "exact_match_frac_at_best": 0.015527950310559006
+   },
+   "hosp_patients_days": 0,
+   "icu_patients_days": 1194,
+   "new_tests_days": 0,
+   "people_vaccinated_first": "2020-12-27",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 83369840.0,
+   "population_gc": 83019213.0
+  },
+  "ITA": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -148.0,
+    "zero_frac": 0.12259194395796848,
+    "reporting_days_per_week": 6.14,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.15984015984015984,
+    "weekday_ratio": {
+     "Mon": 0.549,
+     "Tue": 0.901,
+     "Wed": 0.971,
+     "Thu": 0.992,
+     "Fri": 1.765,
+     "Sat": 0.961,
+     "Sun": 0.82
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 25603510.0,
+    "max": 229122.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -31.0,
+    "zero_frac": 0.1243432574430823,
+    "reporting_days_per_week": 6.13,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.15915915915915915,
+    "weekday_ratio": {
+     "Mon": 0.757,
+     "Tue": 1.064,
+     "Wed": 0.959,
+     "Thu": 0.971,
+     "Fri": 1.778,
+     "Sat": 0.871,
+     "Sun": 0.575
+    },
+    "n_spikes": 4,
+    "spike_dates": [
+     "2020-03-05",
+     "2020-03-06",
+     "2020-03-08",
+     "2020-08-15"
+    ],
+    "total": 188322.0,
+    "max": 993.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8602150537634409,
+    "reporting_days_per_week": 0.98,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 11,
+    "spike_dates": [
+     "2020-10-25",
+     "2020-11-01",
+     "2020-11-08",
+     "2020-11-15",
+     "2020-11-22",
+     "2022-01-02",
+     "2022-01-09",
+     "2022-01-16",
+     "2022-01-23",
+     "2024-07-21"
+    ],
+    "total": 26781078.0,
+    "max": 1268153.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8608124253285544,
+    "reporting_days_per_week": 0.97,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 6,
+    "spike_dates": [
+     "2020-11-01",
+     "2020-11-08",
+     "2020-11-15",
+     "2020-11-22",
+     "2020-11-29",
+     "2020-12-06"
+    ],
+    "total": 197307.0,
+    "max": 5339.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-02",
+    "last_date": "2022-09-15",
+    "n_days": 988,
+    "n_valid": 988,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.048582995951417005,
+    "reporting_days_per_week": 6.66,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14361702127659576,
+    "weekday_ratio": {
+     "Mon": 0.635,
+     "Tue": 0.99,
+     "Wed": 1.068,
+     "Thu": 1.127,
+     "Fri": 1.113,
+     "Sat": 1.085,
+     "Sun": 0.932
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 21814969.0,
+    "max": 220532.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 968,
+    "first": "2020-01-22",
+    "last": "2022-09-15",
+    "median_rel_diff": 0.0,
+    "max_rel_diff": 1.0,
+    "last_a": 22114423.0,
+    "last_b": 22114423.0,
+    "last_rel_diff": 0.0
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.006747282713371773,
+    "max_rel_diff": 1.0,
+    "last_a": 25603510.0,
+    "last_b": 25610293.0,
+    "last_rel_diff": 0.00026485444738957105
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.9985805726963781,
+    "corr_lag0": 0.9985805726963781,
+    "exact_match_frac_at_best": 0.26370217166494314
+   },
+   "hosp_patients_days": 1627,
+   "icu_patients_days": 1627,
+   "new_tests_days": 847,
+   "people_vaccinated_first": "2020-12-27",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 59037472.0,
+   "population_gc": 60359546.0
+  },
+  "USA": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -3862.0,
+    "zero_frac": 0.023642732049036778,
+    "reporting_days_per_week": 6.83,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.144524236983842,
+    "weekday_ratio": {
+     "Mon": 1.03,
+     "Tue": 1.04,
+     "Wed": 1.359,
+     "Thu": 1.219,
+     "Fri": 1.2,
+     "Sat": 0.626,
+     "Sun": 0.49
+    },
+    "n_spikes": 16,
+    "spike_dates": [
+     "2020-03-02",
+     "2020-03-04",
+     "2020-03-05",
+     "2020-03-06",
+     "2020-03-07",
+     "2020-03-08",
+     "2020-03-11",
+     "2020-03-12",
+     "2020-03-16",
+     "2020-03-17"
+    ],
+    "total": 103802701.0,
+    "max": 1354505.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 4,
+    "negative_sum": -553.0,
+    "zero_frac": 0.03327495621716287,
+    "reporting_days_per_week": 6.77,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14363636363636365,
+    "weekday_ratio": {
+     "Mon": 0.728,
+     "Tue": 1.187,
+     "Wed": 1.702,
+     "Thu": 1.323,
+     "Fri": 1.154,
+     "Sat": 0.555,
+     "Sun": 0.329
+    },
+    "n_spikes": 5,
+    "spike_dates": [
+     "2020-03-18",
+     "2020-03-19",
+     "2020-03-20",
+     "2020-03-21",
+     "2020-03-22"
+    ],
+    "total": 1123836.0,
+    "max": 4405.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2023-05-20",
+    "n_days": 1232,
+    "n_valid": 1232,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.859577922077922,
+    "reporting_days_per_week": 0.98,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 9,
+    "spike_dates": [
+     "2020-03-15",
+     "2020-03-22",
+     "2020-03-29",
+     "2020-04-05",
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-05-03",
+     "2020-05-10"
+    ],
+    "total": 103436829.0,
+    "max": 5650933.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8614097968936678,
+    "reporting_days_per_week": 0.97,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 2,
+    "spike_dates": [
+     "2020-04-19",
+     "2020-04-26"
+    ],
+    "total": 1193165.0,
+    "max": 23312.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-14",
+    "n_days": 988,
+    "n_valid": 988,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.03441295546558704,
+    "reporting_days_per_week": 6.76,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14465408805031446,
+    "weekday_ratio": {
+     "Mon": 0.96,
+     "Tue": 1.065,
+     "Wed": 1.144,
+     "Thu": 1.139,
+     "Fri": 1.189,
+     "Sat": 0.799,
+     "Sun": 0.662
+    },
+    "n_spikes": 8,
+    "spike_dates": [
+     "2020-03-03",
+     "2020-03-04",
+     "2020-03-05",
+     "2020-03-06",
+     "2020-03-07",
+     "2020-03-08",
+     "2020-03-09",
+     "2020-03-10"
+    ],
+    "total": 91790598.0,
+    "max": 1235521.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 967,
+    "first": "2020-01-22",
+    "last": "2022-09-14",
+    "median_rel_diff": 0.03133089241242446,
+    "max_rel_diff": 0.8333333333333334,
+    "last_a": 95492224.0,
+    "last_b": 92440495.0,
+    "last_rel_diff": 0.03195787962797892
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.018224121475111835,
+    "max_rel_diff": 1.0,
+    "last_a": 103802702.0,
+    "last_b": 102247392.0,
+    "last_rel_diff": 0.014983328661329067
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.9768311618691994,
+    "corr_lag0": 0.9768311618691994,
+    "exact_match_frac_at_best": 0.014492753623188406
+   },
+   "hosp_patients_days": 1381,
+   "icu_patients_days": 1381,
+   "new_tests_days": 840,
+   "people_vaccinated_first": "2020-12-13",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 988,
+   "gc_mobility_days": 940,
+   "population_owid": 338289856.0,
+   "population_gc": 331002647.0
+  },
+  "BRA": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 4,
+    "negative_sum": -26015.0,
+    "zero_frac": 0.13134851138353765,
+    "reporting_days_per_week": 6.08,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.15182186234817813,
+    "weekday_ratio": {
+     "Mon": 0.818,
+     "Tue": 1.134,
+     "Wed": 1.258,
+     "Thu": 1.26,
+     "Fri": 1.301,
+     "Sat": 0.789,
+     "Sun": 0.429
+    },
+    "n_spikes": 6,
+    "spike_dates": [
+     "2020-03-13",
+     "2020-03-17",
+     "2020-03-19",
+     "2020-03-20",
+     "2020-03-21",
+     "2020-03-22"
+    ],
+    "total": 37076053.0,
+    "max": 287149.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 3,
+    "negative_sum": -126.0,
+    "zero_frac": 0.1436077057793345,
+    "reporting_days_per_week": 5.99,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1517948717948718,
+    "weekday_ratio": {
+     "Mon": 0.805,
+     "Tue": 1.223,
+     "Wed": 1.335,
+     "Thu": 1.273,
+     "Fri": 1.242,
+     "Sat": 0.739,
+     "Sun": 0.401
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 699276.0,
+    "max": 4148.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.899641577060932,
+    "reporting_days_per_week": 0.7,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 14,
+    "spike_dates": [
+     "2020-04-19",
+     "2020-04-26",
+     "2020-05-03",
+     "2020-05-10",
+     "2020-05-17",
+     "2020-05-24",
+     "2020-05-31",
+     "2020-06-07",
+     "2020-06-14",
+     "2022-01-23"
+    ],
+    "total": 37511921.0,
+    "max": 1283024.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.9014336917562724,
+    "reporting_days_per_week": 0.69,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 702116.0,
+    "max": 21094.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-15",
+    "n_days": 989,
+    "n_valid": 989,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -573.0,
+    "zero_frac": 0.007077856420626896,
+    "reporting_days_per_week": 6.95,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14475025484199797,
+    "weekday_ratio": {
+     "Mon": 0.605,
+     "Tue": 1.117,
+     "Wed": 1.248,
+     "Thu": 1.211,
+     "Fri": 1.168,
+     "Sat": 1.038,
+     "Sun": 0.572
+    },
+    "n_spikes": 5,
+    "spike_dates": [
+     "2020-03-15",
+     "2020-03-18",
+     "2020-03-20",
+     "2020-03-22",
+     "2021-09-18"
+    ],
+    "total": 34581186.0,
+    "max": 298408.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 968,
+    "first": "2020-01-22",
+    "last": "2022-09-15",
+    "median_rel_diff": 0.0005585653498753445,
+    "max_rel_diff": 1.0,
+    "last_a": 34568833.0,
+    "last_b": 34568833.0,
+    "last_rel_diff": 0.0
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.009332245003241655,
+    "max_rel_diff": 1.0,
+    "last_a": 37076053.0,
+    "last_b": 37076053.0,
+    "last_rel_diff": 0.0
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.9745570852698416,
+    "corr_lag0": 0.9745570852698416,
+    "exact_match_frac_at_best": 0.13236814891416754
+   },
+   "hosp_patients_days": 0,
+   "icu_patients_days": 0,
+   "new_tests_days": 265,
+   "people_vaccinated_first": "2021-01-17",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 215313504.0,
+   "population_gc": 212559409.0
+  },
+  "IND": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 4,
+    "negative_sum": -3163.0,
+    "zero_frac": 0.040280210157618214,
+    "reporting_days_per_week": 6.72,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1446886446886447,
+    "weekday_ratio": {
+     "Mon": 0.811,
+     "Tue": 0.935,
+     "Wed": 1.086,
+     "Thu": 1.089,
+     "Fri": 0.966,
+     "Sat": 1.116,
+     "Sun": 0.968
+    },
+    "n_spikes": 1,
+    "spike_dates": [
+     "2023-02-11"
+    ],
+    "total": 44690738.0,
+    "max": 414188.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -1.0,
+    "zero_frac": 0.08844133099824869,
+    "reporting_days_per_week": 6.38,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14711538461538462,
+    "weekday_ratio": {
+     "Mon": 0.839,
+     "Tue": 1.14,
+     "Wed": 1.024,
+     "Thu": 1.028,
+     "Fri": 1.059,
+     "Sat": 1.001,
+     "Sun": 0.901
+    },
+    "n_spikes": 4,
+    "spike_dates": [
+     "2020-04-06",
+     "2022-03-25",
+     "2022-04-26",
+     "2022-11-01"
+    ],
+    "total": 530779.0,
+    "max": 7374.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8614097968936678,
+    "reporting_days_per_week": 0.97,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 25,
+    "spike_dates": [
+     "2020-04-12",
+     "2020-04-19",
+     "2020-04-26",
+     "2020-05-03",
+     "2020-05-10",
+     "2020-05-17",
+     "2020-05-24",
+     "2020-05-31",
+     "2020-06-07",
+     "2021-04-18"
+    ],
+    "total": 45041748.0,
+    "max": 2738957.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8667861409796893,
+    "reporting_days_per_week": 0.93,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 14,
+    "spike_dates": [
+     "2020-06-21",
+     "2021-04-25",
+     "2021-05-02",
+     "2021-05-09",
+     "2021-05-16",
+     "2021-05-23",
+     "2023-04-09",
+     "2023-04-16",
+     "2023-04-23",
+     "2023-04-30"
+    ],
+    "total": 533623.0,
+    "max": 28982.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-13",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 2,
+    "negative_sum": -5.0,
+    "zero_frac": 0.0547112462006079,
+    "reporting_days_per_week": 6.62,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1439312567132116,
+    "weekday_ratio": {
+     "Mon": 0.974,
+     "Tue": 1.051,
+     "Wed": 1.049,
+     "Thu": 1.046,
+     "Fri": 1.029,
+     "Sat": 0.966,
+     "Sun": 0.839
+    },
+    "n_spikes": 0,
+    "spike_dates": [],
+    "total": 44516479.0,
+    "max": 414188.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 966,
+    "first": "2020-01-22",
+    "last": "2022-09-13",
+    "median_rel_diff": 0.001745117179647997,
+    "max_rel_diff": 1.0,
+    "last_a": 44510057.0,
+    "last_b": 44516479.0,
+    "last_rel_diff": 0.00014426118471768624
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.0038557687086654513,
+    "max_rel_diff": 1.0,
+    "last_a": 44690738.0,
+    "last_b": 44687820.0,
+    "last_rel_diff": 6.529317103691597e-05
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 1,
+    "corr_at_best": 0.9998210999287808,
+    "corr_lag0": 0.9949706917374473,
+    "exact_match_frac_at_best": 0.7939958592132506
+   },
+   "hosp_patients_days": 0,
+   "icu_patients_days": 0,
+   "new_tests_days": 795,
+   "people_vaccinated_first": "2021-01-15",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 1417173120.0,
+   "population_gc": 1380004385.0
+  },
+  "ZAF": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.11295971978984239,
+    "reporting_days_per_week": 6.21,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14906219151036526,
+    "weekday_ratio": {
+     "Mon": 0.762,
+     "Tue": 0.849,
+     "Wed": 1.143,
+     "Thu": 1.263,
+     "Fri": 1.136,
+     "Sat": 0.954,
+     "Sun": 0.857
+    },
+    "n_spikes": 3,
+    "spike_dates": [
+     "2020-03-23",
+     "2020-03-24",
+     "2021-11-23"
+    ],
+    "total": 4067067.0,
+    "max": 37875.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 1,
+    "negative_sum": -228.0,
+    "zero_frac": 0.2679509632224168,
+    "reporting_days_per_week": 5.12,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.15209580838323353,
+    "weekday_ratio": {
+     "Mon": 0.829,
+     "Tue": 1.199,
+     "Wed": 1.23,
+     "Thu": 1.311,
+     "Fri": 1.112,
+     "Sat": 0.774,
+     "Sun": 0.519
+    },
+    "n_spikes": 2,
+    "spike_dates": [
+     "2021-11-25",
+     "2022-05-13"
+    ],
+    "total": 102595.0,
+    "max": 844.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8876941457586619,
+    "reporting_days_per_week": 0.79,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 11,
+    "spike_dates": [
+     "2020-06-07",
+     "2020-06-14",
+     "2020-06-21",
+     "2020-06-28",
+     "2020-07-05",
+     "2020-07-12",
+     "2020-07-19",
+     "2021-06-27",
+     "2021-12-12",
+     "2021-12-19"
+    ],
+    "total": 4072765.0,
+    "max": 162987.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.9151732377538829,
+    "reporting_days_per_week": 0.59,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 5,
+    "spike_dates": [
+     "2020-06-07",
+     "2020-06-14",
+     "2020-06-21",
+     "2020-06-28",
+     "2020-07-05"
+    ],
+    "total": 102595.0,
+    "max": 4027.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-13",
+    "n_days": 987,
+    "n_valid": 987,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.09017223910840932,
+    "reporting_days_per_week": 6.37,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.1447661469933185,
+    "weekday_ratio": {
+     "Mon": 0.852,
+     "Tue": 1.171,
+     "Wed": 1.17,
+     "Thu": 1.197,
+     "Fri": 1.109,
+     "Sat": 0.869,
+     "Sun": 0.639
+    },
+    "n_spikes": 9,
+    "spike_dates": [
+     "2020-03-14",
+     "2020-03-15",
+     "2020-03-22",
+     "2020-03-26",
+     "2020-03-27",
+     "2020-03-28",
+     "2020-03-30",
+     "2020-03-31",
+     "2021-11-22"
+    ],
+    "total": 4015128.0,
+    "max": 37309.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 966,
+    "first": "2020-01-22",
+    "last": "2022-09-13",
+    "median_rel_diff": 0.0022513271533364005,
+    "max_rel_diff": 1.0,
+    "last_a": 4014724.0,
+    "last_b": 4014986.0,
+    "last_rel_diff": 6.52555201935947e-05
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.0036663168451846005,
+    "max_rel_diff": 1.0,
+    "last_a": 4067067.0,
+    "last_b": 4065743.0,
+    "last_rel_diff": 0.00032554172331068066
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 1,
+    "corr_at_best": 0.9905601702743695,
+    "corr_lag0": 0.9135274292707642,
+    "exact_match_frac_at_best": 0.5165631469979296
+   },
+   "hosp_patients_days": 831,
+   "icu_patients_days": 873,
+   "new_tests_days": 797,
+   "people_vaccinated_first": "2021-02-16",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 984,
+   "gc_mobility_days": 940,
+   "population_owid": 59893884.0,
+   "population_gc": 59308690.0
+  },
+  "SWE": {
+   "jhu_new_cases": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.5236427320490368,
+    "reporting_days_per_week": 3.33,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.28125,
+    "weekday_ratio": {
+     "Mon": 0.167,
+     "Tue": 1.849,
+     "Wed": 0.918,
+     "Thu": 3.059,
+     "Fri": 0.796,
+     "Sat": 0.127,
+     "Sun": 0.076
+    },
+    "n_spikes": 2,
+    "spike_dates": [
+     "2020-03-06",
+     "2020-03-11"
+    ],
+    "total": 2699339.0,
+    "max": 138985.0
+   },
+   "jhu_new_deaths": {
+    "first_date": "2020-01-23",
+    "last_date": "2023-03-09",
+    "n_days": 1142,
+    "n_valid": 1142,
+    "missing_frac": 0.0,
+    "n_negative": 7,
+    "negative_sum": -256.0,
+    "zero_frac": 0.5954465849387041,
+    "reporting_days_per_week": 2.83,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.31648351648351647,
+    "weekday_ratio": {
+     "Mon": 0.11,
+     "Tue": 0.971,
+     "Wed": 1.706,
+     "Thu": 3.317,
+     "Fri": 0.89,
+     "Sat": 0.004,
+     "Sun": 0.036
+    },
+    "n_spikes": 3,
+    "spike_dates": [
+     "2020-11-04",
+     "2020-11-18",
+     "2021-09-14"
+    ],
+    "total": 23777.0,
+    "max": 503.0
+   },
+   "owid_new_cases": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8608124253285544,
+    "reporting_days_per_week": 0.97,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 6,
+    "spike_dates": [
+     "2020-11-08",
+     "2020-11-15",
+     "2022-01-09",
+     "2022-01-16",
+     "2022-01-23",
+     "2022-01-30"
+    ],
+    "total": 2755181.0,
+    "max": 281038.0
+   },
+   "owid_new_deaths": {
+    "first_date": "2020-01-05",
+    "last_date": "2024-08-04",
+    "n_days": 1674,
+    "n_valid": 1674,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.8637992831541219,
+    "reporting_days_per_week": 0.95,
+    "weekly_reporting": true,
+    "top_weekday_share_of_nonzero": 1.0,
+    "weekday_ratio": {
+     "Mon": 0.0,
+     "Tue": 0.0,
+     "Wed": 0.0,
+     "Thu": 0.0,
+     "Fri": 0.0,
+     "Sat": 0.0,
+     "Sun": 7.0
+    },
+    "n_spikes": 6,
+    "spike_dates": [
+     "2020-11-15",
+     "2020-11-22",
+     "2020-11-29",
+     "2020-12-06",
+     "2020-12-13",
+     "2020-12-20"
+    ],
+    "total": 27399.0,
+    "max": 679.0
+   },
+   "gc_new_confirmed": {
+    "first_date": "2020-01-01",
+    "last_date": "2022-09-14",
+    "n_days": 988,
+    "n_valid": 988,
+    "missing_frac": 0.0,
+    "n_negative": 0,
+    "negative_sum": 0.0,
+    "zero_frac": 0.06174089068825911,
+    "reporting_days_per_week": 6.57,
+    "weekly_reporting": false,
+    "top_weekday_share_of_nonzero": 0.14563106796116504,
+    "weekday_ratio": {
+     "Mon": 0.916,
+     "Tue": 1.313,
+     "Wed": 1.343,
+     "Thu": 1.247,
+     "Fri": 1.134,
+     "Sat": 0.662,
+     "Sun": 0.361
+    },
+    "n_spikes": 5,
+    "spike_dates": [
+     "2020-03-03",
+     "2020-03-04",
+     "2020-03-06",
+     "2020-03-09",
+     "2020-03-11"
+    ],
+    "total": 2578522.0,
+    "max": 53881.0
+   },
+   "cmp_cum_cases_jhu_vs_gc": {
+    "n_common": 967,
+    "first": "2020-01-22",
+    "last": "2022-09-14",
+    "median_rel_diff": 0.0013777885529574806,
+    "max_rel_diff": 1.0,
+    "last_a": 2573548.0,
+    "last_b": 2578521.0,
+    "last_rel_diff": 0.0019286249753250023
+   },
+   "cmp_cum_cases_jhu_vs_owid": {
+    "n_common": 1143,
+    "first": "2020-01-22",
+    "last": "2023-03-09",
+    "median_rel_diff": 0.0034865577209865946,
+    "max_rel_diff": 1.0,
+    "last_a": 2699339.0,
+    "last_b": 2698839.0,
+    "last_rel_diff": 0.00018523053236366385
+   },
+   "lag_daily_cases_jhu_vs_gc": {
+    "best_lag_days": 0,
+    "corr_at_best": 0.7271326664140374,
+    "corr_lag0": 0.7271326664140374,
+    "exact_match_frac_at_best": 0.16873706004140787
+   },
+   "hosp_patients_days": 1485,
+   "icu_patients_days": 1097,
+   "new_tests_days": 721,
+   "people_vaccinated_first": "2021-01-03",
+   "oxcgrt_stringency_days": 1096,
+   "oxcgrt_range": [
+    "2020-01-01",
+    "2022-12-31"
+   ],
+   "gc_weather_days": 985,
+   "gc_mobility_days": 940,
+   "population_owid": 10549349.0,
+   "population_gc": 10230185.0
+  }
+ },
+ "korea_sido": {
+  "sido": [
+   {
+    "key": "KR_11",
+    "name": "Seoul",
+    "population": 9668465.0,
+    "area_sq_km": 605.0,
+    "cases_first": "2020-01-24",
+    "cases_last": "2020-09-09",
+    "cases_total": 4520.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_26",
+    "name": "Busan",
+    "population": 3453198.0,
+    "area_sq_km": 769.0,
+    "cases_first": "2020-02-22",
+    "cases_last": "2020-09-09",
+    "cases_total": 336.0,
+    "cases_negative_days": 2,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_27",
+    "name": "Daegu",
+    "population": 2444412.0,
+    "area_sq_km": 883.0,
+    "cases_first": "2020-02-18",
+    "cases_last": "2020-09-09",
+    "cases_total": 7104.0,
+    "cases_negative_days": 1,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_28",
+    "name": "Incheon",
+    "population": 2936117.0,
+    "area_sq_km": 1046.0,
+    "cases_first": "2020-01-20",
+    "cases_last": "2020-09-09",
+    "cases_total": 806.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_29",
+    "name": "Gwangju",
+    "population": 1490092.0,
+    "area_sq_km": 501.0,
+    "cases_first": "2020-02-04",
+    "cases_last": "2020-09-09",
+    "cases_total": 465.0,
+    "cases_negative_days": 1,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_30",
+    "name": "Daejeon",
+    "population": 1475221.0,
+    "area_sq_km": 539.0,
+    "cases_first": "2020-02-22",
+    "cases_last": "2020-09-09",
+    "cases_total": 329.0,
+    "cases_negative_days": 2,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_31",
+    "name": "Ulsan",
+    "population": 1150116.0,
+    "area_sq_km": 1060.0,
+    "cases_first": "2020-02-22",
+    "cases_last": "2020-09-09",
+    "cases_total": 125.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_41",
+    "name": "Gyeonggi",
+    "population": 13103188.0,
+    "area_sq_km": 10172.0,
+    "cases_first": "2020-01-26",
+    "cases_last": "2020-09-09",
+    "cases_total": 3788.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_42",
+    "name": "Gangwon",
+    "population": 1520391.0,
+    "area_sq_km": 16873.0,
+    "cases_first": "2020-02-22",
+    "cases_last": "2020-09-09",
+    "cases_total": 211.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_43",
+    "name": "Chungbuk",
+    "population": 1620935.0,
+    "area_sq_km": 7407.0,
+    "cases_first": "2020-02-21",
+    "cases_last": "2020-09-09",
+    "cases_total": 149.0,
+    "cases_negative_days": 0,
+    "weather_days": 986,
+    "rh_days": 986
+   },
+   {
+    "key": "KR_44",
+    "name": "Chungnam",
+    "population": 2181416.0,
+    "area_sq_km": 8204.0,
+    "cases_first": "2020-02-21",
+    "cases_last": "2020-09-09",
+    "cases_total": 390.0,
+    "cases_negative_days": 1,
+    "weather_days": 987,
+    "rh_days": 987
+   },
+   {
+    "key": "KR_45",
+    "name": "Jeonbuk",
+    "population": 1818157.0,
+    "area_sq_km": 8067.0,
+    "cases_first": "2020-01-31",
+    "cases_last": "2020-09-09",
+    "cases_total": 96.0,
+    "cases_negative_days": 0,
+    "weather_days": 987,
+    "rh_days": 987
+   },
+   {
+    "key": "KR_46",
+    "name": "Jeonnam",
+    "population": 1790352.0,
+    "area_sq_km": 12309.0,
+    "cases_first": "2020-02-06",
+    "cases_last": "2020-09-09",
+    "cases_total": 166.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_47",
+    "name": "Gyeongbuk",
+    "population": 2700328.0,
+    "area_sq_km": 19029.0,
+    "cases_first": "2020-02-19",
+    "cases_last": "2020-09-09",
+    "cases_total": 1478.0,
+    "cases_negative_days": 1,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_48",
+    "name": "Gyeongnam",
+    "population": 3350350.0,
+    "area_sq_km": 10538.0,
+    "cases_first": "2020-02-21",
+    "cases_last": "2020-09-09",
+    "cases_total": 259.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_49",
+    "name": "Jeju",
+    "population": 658282.0,
+    "area_sq_km": 1848.0,
+    "cases_first": "2020-02-21",
+    "cases_last": "2020-09-09",
+    "cases_total": 51.0,
+    "cases_negative_days": 0,
+    "weather_days": 984,
+    "rh_days": 984
+   },
+   {
+    "key": "KR_50",
+    "name": "Sejong",
+    "population": 312374.0,
+    "area_sq_km": 465.0,
+    "cases_first": "2020-02-22",
+    "cases_last": "2020-09-08",
+    "cases_total": 76.0,
+    "cases_negative_days": 0,
+    "weather_days": 986,
+    "rh_days": 986
+   }
+  ],
+  "period_with_sido_cases": [
+   "2020-01-24",
+   "2020-09-09"
+  ],
+  "sum_sido_cases": 20348.0,
+  "national_cases_gc_same_period": 21917.0,
+  "national_cases_jhu_same_period": 21742.0,
+  "sido_sum_over_national_gc": 0.9284117351827349,
+  "daily_corr_sido_sum_vs_national_gc": 0.9106818073479939,
+  "population_sum_sido_gc": 51673394.0,
+  "population_national_gc": 51269183.0,
+  "population_worldbank": {
+   "2019": 51764822.0,
+   "2020": 51836239.0,
+   "2021": 51769539.0
+  },
+  "id_match_natural_earth": {
+   "missing_in_ne": [],
+   "extra_in_ne": []
+  }
+ },
+ "inputs": {
+  "ne_admin1_10m": {
+   "status": "ok",
+   "version": "5.2.0-pre",
+   "retrieved_utc": "2026-10-26T16:19:17+00:00",
+   "files": [
+    {
+     "path": "data_raw/ne_admin1_10m/ne_10m_admin_1_states_provinces.geojson",
+     "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5"
+    },
+    {
+     "path": "data_raw/ne_admin1_10m/VERSION",
+     "sha256": "fa43123c5e3a802287a821ea65b4daeeb20ed63cfdc82a67c3dfa4aad0173280"
+    }
+   ]
+  },
+  "wb_population": {
+   "status": "ok",
+   "version": "main",
+   "retrieved_utc": "2026-10-26T16:12:00+00:00",
+   "files": [
+    {
+     "path": "data_raw/wb_population/population.csv",
+     "sha256": "2c697c3e668c8cb06ee467cd0d475b37b52844fdc48cb7725b79b58f18bf0b02"
+    }
+   ]
+  },
+  "owid_covid": {
+   "status": "ok",
+   "version": "master (파일의 마지막 날짜로 기록)",
+   "retrieved_utc": "2026-10-28T15:38:36+00:00",
+   "files": [
+    {
+     "path": "data_raw/owid_covid/owid-covid-data.csv",
+     "sha256": "8473d0f0fdf962e1ffbd5b85b18726fc96a49bab109e271186c339725a12b10c"
+    },
+    {
+     "path": "data_raw/owid_covid/owid-covid-codebook.csv",
+     "sha256": "d7e681ccf6694c0020b3936ef9d28004e0eeb904909fde07494ed9adf756067c"
+    },
+    {
+     "path": "data_raw/owid_covid/README.md",
+     "sha256": "559086f3c7379f70845ec105d0d3723d0cf180b296d5c69fdb780c85f6163dc2"
+    }
+   ]
+  },
+  "jhu_csse_global": {
+   "status": "ok",
+   "version": "master (2023-03-10 수집 종료)",
+   "retrieved_utc": "2026-10-28T15:38:42+00:00",
+   "files": [
+    {
+     "path": "data_raw/jhu_csse_global/time_series_covid19_confirmed_global.csv",
+     "sha256": "e6234a59eec4359d2577358b5220e1a7e3da74c162913cdb7d882db1413f98c2"
+    },
+    {
+     "path": "data_raw/jhu_csse_global/time_series_covid19_deaths_global.csv",
+     "sha256": "4e87757a3e059c45650a1e1856614f8e339ee3c70653c378a7ba6f7b0ee8c72e"
+    }
+   ]
+  },
+  "oxcgrt_national": {
+   "status": "ok",
+   "version": "main (v1)",
+   "retrieved_utc": "2026-10-28T15:38:42+00:00",
+   "files": [
+    {
+     "path": "data_raw/oxcgrt_national/OxCGRT_compact_national_v1.csv",
+     "sha256": "fa5c95fa8f5e386517698cdc17581f7e3333348907c57ad8459c877580d0fe79"
+    }
+   ]
+  },
+  "gc19od_kr": {
+   "status": "ok",
+   "version": "v3 (2022-09 갱신 종료)",
+   "retrieved_utc": "2026-10-28T15:38:44+00:00",
+   "files": [
+    {
+     "path": "data_raw/gc19od_kr/index.csv",
+     "sha256": "2aa21339f5d9e4c384fe4423136f93a246d2ce90b70b01ac22199d8020e32528"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR.csv",
+     "sha256": "420dfacc96232e2b868b581231fef353b740ce565df30931db71a56fd608686a"
+    },
+    {
+     "path": "data_raw/gc19od_kr/README.md",
+     "sha256": "63640ab50c5f89c3467ebce86a3dff2963c907c57a43bbc0df477dd02623ba23"
+    },
+    {
+     "path": "data_raw/gc19od_kr/table-epidemiology.md",
+     "sha256": "53d177ddc75e5409e15d848bd1c108daf01a69637fbd43aae5a7a1fa4932db88"
+    },
+    {
+     "path": "data_raw/gc19od_kr/table-demographics.md",
+     "sha256": "534e17627b835e071917fb4ef752584e39ea182718b008bc548b3f8083c13008"
+    },
+    {
+     "path": "data_raw/gc19od_kr/table-weather.md",
+     "sha256": "32a71c6d1501f7512139416ad3d8e0c409a94c2de14abdc5a4bde7dd79347b3e"
+    },
+    {
+     "path": "data_raw/gc19od_kr/table-mobility.md",
+     "sha256": "057aa6461000e79ecdb81b99c0f743d7159387b308308fe9ac103ac04dcf995a"
+    },
+    {
+     "path": "data_raw/gc19od_kr/table-government-response.md",
+     "sha256": "9b6514cca99f7aec85696427a0fc8a8faf26bf1deedcc2801805fb1dd2fe6b4d"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_11.csv",
+     "sha256": "4da6325f07f82f71778e2dc5e2ab6397ed522a62a229a8fe167fe68caab909e7"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_26.csv",
+     "sha256": "133bb6b5ffc2a4fb3e5106eac8fc99343fe02f49169ae57a643ab93d7a34fae5"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_27.csv",
+     "sha256": "c6afc2fd15388479f6937aa2acc04dfd4c3642bdc46a7d89f7407a7ea5d308fc"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_28.csv",
+     "sha256": "cdd00dc2dde008668f3f4d264dda5d9a5e03b2285763016f144158ab0e6c0020"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_29.csv",
+     "sha256": "1447580f352bd00e72525406a41f9d9c6e285f570997619d2474ea57b3d8026a"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_30.csv",
+     "sha256": "c229edffb9cd90e07efcdbd558d814976c3aa4e35992624bb09788692c0a32bf"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_31.csv",
+     "sha256": "30997c25900e7be9af19aa54f67b4383dfcdebb3aaa7bffe0d925361230f26cd"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_41.csv",
+     "sha256": "5eebd810f9cafb54e30e053d2158fa0cea1663ab8185eb22365f495fb5d8f2ec"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_42.csv",
+     "sha256": "51efaac4791f696c37d728299bd27977fb103c9267507dd4adbcd74e8825a3a1"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_43.csv",
+     "sha256": "453ee724a743732b500eeab62ddf5e27e8a188e34caecf83768462f041ff5505"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_44.csv",
+     "sha256": "fb942b0613efccaeda197dd09a1cea0650b37d0d8e46f6c51561da90dbf7082f"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_45.csv",
+     "sha256": "4363b8b803934e65f8d069c805db44cb15b4582b7d5e7b44a7252b46fb8a73cf"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_46.csv",
+     "sha256": "960225f22c54ad1eaf5cf976898984f3caaaad43762ee543fc6de9e1e3e9b4f8"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_47.csv",
+     "sha256": "058189a730d7677ea9dd439f807e8df78c486214173475fa4853ca0e88ae6f73"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_48.csv",
+     "sha256": "4a86f5dce713218a96c5c732be52a01b8032d006eead89b4f208aec6f7cce4d7"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_49.csv",
+     "sha256": "7eba8441f59fdbd1d207ebbf715717ac31c423ce6877ac5d0a4e0caa95e66f00"
+    },
+    {
+     "path": "data_raw/gc19od_kr/KR_50.csv",
+     "sha256": "8caa5e72beb2619e398cbc9334eb82ccbecad862da54b98c221a3ffa114b85dd"
+    }
+   ]
+  },
+  "gc19od_countries": {
+   "status": "ok",
+   "version": "v3 (2022-09 갱신 종료)",
+   "retrieved_utc": "2026-10-28T15:38:53+00:00",
+   "files": [
+    {
+     "path": "data_raw/gc19od_countries/JP.csv",
+     "sha256": "55c80f949cbf3a822e3f083dd8718737d4add5614488c15d43d84da47b358f41"
+    },
+    {
+     "path": "data_raw/gc19od_countries/NZ.csv",
+     "sha256": "7cd4870152a82c4b89df1e5345ff6229732fcb73bb3e76487d81d6c14d367a96"
+    },
+    {
+     "path": "data_raw/gc19od_countries/AU.csv",
+     "sha256": "c16a4764b69d3c2fd66ab6e1178314c2de7ab32919396f8b4fb016ce5673c1c5"
+    },
+    {
+     "path": "data_raw/gc19od_countries/GB.csv",
+     "sha256": "6abeaec9d087490b9b9d281f5169e1228d86f09f1d495a1973c29522f7d2016c"
+    },
+    {
+     "path": "data_raw/gc19od_countries/DE.csv",
+     "sha256": "7e1270931db129b074ce7646c9c4d5651432cce465f502ad193ee49f9fdb37ec"
+    },
+    {
+     "path": "data_raw/gc19od_countries/IT.csv",
+     "sha256": "7d4662b177fef0ccbcea6948c3adea069202463f66de2c3c12bb71589c37c560"
+    },
+    {
+     "path": "data_raw/gc19od_countries/US.csv",
+     "sha256": "e41081a81f285fe88f62255ef20bc91d4f930bb150a46a135b005169476bf280"
+    },
+    {
+     "path": "data_raw/gc19od_countries/BR.csv",
+     "sha256": "dbe1f907881a36b8560eecd57c0f9d04c2c2a887f3cf10fba6c2d4e365d4f35b"
+    },
+    {
+     "path": "data_raw/gc19od_countries/IN.csv",
+     "sha256": "5259ee75efb4295d8e0219df3e93cfc7803700ba1e3cf510744b05f6627e38f3"
+    },
+    {
+     "path": "data_raw/gc19od_countries/ZA.csv",
+     "sha256": "477eee8fb6abdac5ff38f9de973e449e016eabfb10fa4d43c5e9d68d770e02f9"
+    },
+    {
+     "path": "data_raw/gc19od_countries/SE.csv",
+     "sha256": "f390105a94aa3380079e177c2c9c17b0856cdef61c7f84b56470a2be5aa2ed38"
+    }
+   ]
+  }
+ }
+}

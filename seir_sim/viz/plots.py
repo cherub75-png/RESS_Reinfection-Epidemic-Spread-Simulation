@@ -33,7 +33,9 @@ def _cmap():
 
 
 def _font():
+    import logging
     import matplotlib
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
     from matplotlib import font_manager
     for name in ("Noto Sans CJK KR", "NanumGothic", "Noto Sans KR", "UnDotum", "WenQuanYi Zen Hei"):
         if any(name in f.name for f in font_manager.fontManager.ttflist):

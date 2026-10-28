@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from seir_sim.data.registry import DATASETS  # noqa: E402
+from seir_sim.data.registry import DATASETS, TIER  # noqa: E402
 
 RAW = ROOT / "data_raw"
 
@@ -85,8 +85,20 @@ def main(ids):
 
 
 def write_markdown(manifest):
+    ok = [d for d, e in manifest.items() if e["status"] == "ok"]
+    bad = [d for d, e in manifest.items() if e["status"] != "ok"]
     lines = ["# 외부 자료 출처 (scripts/fetch_data.py 가 생성)", "",
-             "원본 파일은 `data_raw/` 에 있고 git 에 넣지 않는다. 같은 파일인지는 SHA-256 으로 확인한다.", "",
+             "원본 파일은 `data_raw/` 에 있고 git 에 넣지 않는다. 같은 파일인지는 SHA-256 으로 확인한다.",
+             "품질 점검 결과: `docs/reports/2_data_quality.md`.", "",
+             "## 확보 현황 요약", "",
+             "| id | 종류 | 상태 | 신뢰 등급 | 재배포 |", "|---|---|---|---|---|"]
+    for did in ok + bad:
+        e = manifest[did]
+        tier, redis = TIER.get(did, ("-", "-"))
+        lines.append(f"| {did} | {e['kind']} | {'확보' if did in ok else '미확보: ' + e['status']} | {tier} | {redis} |")
+    lines += ["", "신뢰 등급: primary = 원출처 기관 자료, compiled = 연구기관이 공식 발표를 모은 자료, "
+              "secondary = 2차 집계 또는 여러 출처 혼합.", "",
+              "## 상세", "",
              "| id | 종류 | 상태 | 출처 | 라이선스 | 버전 | 해상도 | 기준 시점 | 용량 |", "|---|---|---|---|---|---|---|---|---|"]
     for did, e in manifest.items():
         size = sum(f.get("bytes", 0) for f in e["files"])

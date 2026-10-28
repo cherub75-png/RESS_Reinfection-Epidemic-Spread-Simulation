@@ -1,6 +1,6 @@
 # 진행 기록
 
-마지막 갱신: 1단계 완료 (자율 진행 종료, 사용자 확인 대기)
+마지막 갱신: 2단계 진행 (최종 완성 지시서에 따라 자율 진행). 전체 단계 현황: `docs/PROJECT_ROADMAP.md`
 
 ## 1단계 완료 항목 (테스트로 검증됨)
 | 항목 | 내용 | 검증 |
@@ -30,3 +30,12 @@
 ## 2단계 전에 필요한 것 (사용자)
 - 실제 감염 자료 (질병, 지역, 기간, 파일 또는 출처), 예측 목표, 정확도 지표 선호
 - 네트워크 허용 도메인 추가 또는 파일 제공: WorldPop(data.worldpop.org), WorldClim(geodata.ucdavis.edu), 필요하면 ERA5(Copernicus CDS, 계정 필요)
+
+## 2단계: 실제 감염병 자료 (진행 기록)
+- 확보: OWID, JHU CSSE, OxCGRT, Google COVID-19 Open Data (대한민국 국가·17개 시도, 비교 11개국)
+- 차단: WHO, ECDC, CDC, KDCA, KOSIS 등 (PROJECT_ROADMAP 의 목록)
+- 품질 보고: `docs/reports/2_data_quality.md`
+  - OWID 현재 파일은 일별 확진을 주간 보고 형식으로 담고 있음 → 일별 분석 출처는 JHU (2020-01-22 ~ 2023-03-09)
+  - JHU 와 Google 의 대한민국 일별 확진은 하루 어긋남 (발표일 기준 vs 집계일 기준)
+  - 대한민국 시도 확진은 2020-01-24 ~ 2020-09-09 만 있고 2차 자료 (Wikipedia 경유)
+- 분석용 관측 규칙: `seir_sim/surveillance/observed.py` (음수 제외, 보고 공백 병합, 주간 구간)

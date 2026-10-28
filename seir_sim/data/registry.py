@@ -33,6 +33,27 @@ class Dataset:
     files: tuple[str, ...] = field(default=())
 
 
+# 신뢰 등급 (자료의 원출처와의 거리)
+#   primary    : 원출처 기관이 직접 낸 자료 또는 그 공식 저장소
+#   compiled   : 연구기관이 여러 공식 발표를 모아 정리한 자료 (JHU, OWID, OxCGRT, World Bank)
+#   secondary  : 2차 집계 (예: Wikipedia 를 거친 자료) 또는 여러 출처 혼합
+# 재배포: 원자료를 이 저장소에 넣지 않는다 (data_raw 는 git 제외). 파생 결과 공유 시 각 라이선스의 표시 의무를 따른다.
+TIER = {
+    "ne_admin0_10m": ("primary", "가능 (공개 도메인)"),
+    "ne_admin1_10m": ("primary", "가능 (공개 도메인)"),
+    "openflights": ("compiled", "가능 (ODbL: 출처 표시, 파생 DB 동일 조건)"),
+    "wb_population": ("compiled", "가능 (CC BY 4.0: 출처 표시); 사본이라 원본 대조 필요"),
+    "owid_covid": ("compiled", "가능 (CC BY 4.0)"),
+    "jhu_csse_global": ("compiled", "가능 (CC BY 4.0)"),
+    "oxcgrt_national": ("compiled", "가능 (CC BY 4.0)"),
+    "gc19od_kr": ("secondary", "표시 의무; 이동 자료는 Google ToS, 시도 확진은 Wikimedia ToU"),
+    "gc19od_countries": ("secondary", "표시 의무; 이동 자료는 Google ToS"),
+    "worldpop_kor_2020_1km": ("primary", "가능 (CC BY 4.0)"),
+    "gpw_v4_11": ("primary", "가능 (CC BY 4.0)"),
+    "worldclim_tavg_vapr_10m": ("primary", "가능 (CC BY 4.0)"),
+}
+
+
 NE_RAW = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master"
 
 DATASETS: dict[str, Dataset] = {d.id: d for d in [
@@ -58,6 +79,48 @@ DATASETS: dict[str, Dataset] = {d.id: d for d in [
             "main", "국가 단위", "1960 ~ 최신 연도 (파일에 기록)",
             note="World Bank API 원본이 아니라 사본이다. 원본 대조는 api.worldbank.org 접근 허용 후 가능.",
             official_host="api.worldbank.org"),
+    # ------------------------------------------------------------------ 2단계: 감염병 자료
+    Dataset("owid_covid", "epidemiology", "Our World in Data COVID-19 dataset (국가별 일별 확진·사망·검사·입원·백신)",
+            ("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv",
+             "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-codebook.csv",
+             "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/README.md"),
+            "CC BY 4.0 (OWID); 하위 출처별 조건은 codebook 참조", "Our World in Data, 공식 GitHub 저장소 owid/covid-19-data",
+            "master (파일의 마지막 날짜로 기록)", "국가", "2020-01 ~ 파일 마지막 날짜 (일별)",
+            note="확진·사망의 원출처는 기간에 따라 JHU CSSE(2023-03 이전)와 WHO 이다 (codebook). OWID 자체 사이트(catalog.ourworldindata.org)는 이 환경에서 차단.",
+            official_host="covid.ourworldindata.org / catalog.ourworldindata.org (차단)"),
+    Dataset("jhu_csse_global", "epidemiology", "JHU CSSE COVID-19 global time series (확진·사망 누적)",
+            ("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
+             "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"),
+            "CC BY 4.0", "Johns Hopkins University CSSE, 공식 GitHub 저장소", "master (2023-03-10 수집 종료)",
+            "국가 (일부 하위 지역)", "2020-01-22 ~ 2023-03-09 (일별 누적)",
+            note="교차 검증용. 2023-03-10 에 수집이 끝났다."),
+    Dataset("oxcgrt_national", "policy", "Oxford COVID-19 Government Response Tracker (국가별 일별 정책 지수)",
+            ("https://raw.githubusercontent.com/OxCGRT/covid-policy-dataset/main/data/OxCGRT_compact_national_v1.csv",),
+            "CC BY 4.0", "Blavatnik School of Government, University of Oxford, 공식 GitHub 저장소 OxCGRT/covid-policy-dataset",
+            "main (v1)", "국가", "2020-01-01 ~ 2022-12-31 (일별)"),
+    Dataset("gc19od_kr", "epidemiology", "Google COVID-19 Open Data v3: 대한민국 국가·시도별 통합 표 (확진·사망·인구·기상·이동·정책)",
+            tuple(["https://storage.googleapis.com/covid19-open-data/v3/index.csv",
+                   "https://storage.googleapis.com/covid19-open-data/v3/location/KR.csv",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/README.md",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/docs/table-epidemiology.md",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/docs/table-demographics.md",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/docs/table-weather.md",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/docs/table-mobility.md",
+                   "https://raw.githubusercontent.com/GoogleCloudPlatform/covid-19-open-data/main/docs/table-government-response.md"]
+                  + [f"https://storage.googleapis.com/covid19-open-data/v3/location/KR_{c}.csv"
+                     for c in (11, 26, 27, 28, 29, 30, 31, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50)]),
+            "출력물 CC BY 4.0; 하위 출처별 조건 (시도 확진: Wikipedia 집계 [Wikimedia ToU], 기상: NOAA GHCN [미국 정부 공개], "
+            "이동: Google Community Mobility [Google ToS], 인구: Wikidata [CC0] / WorldPop [CC BY 4.0])",
+            "Google Cloud COVID-19 Open Data (storage.googleapis.com/covid19-open-data, 저장소 GoogleCloudPlatform/covid-19-open-data)",
+            "v3 (2022-09 갱신 종료)", "국가, 시도 (17)", "2020-01-01 ~ 2022-09-17 (일별)",
+            note="시도별 확진·사망은 2020-01-24 ~ 2020-09-09 만 있다 (원출처: 영문 Wikipedia 의 KCDC 브리핑 집계, 2차 자료). "
+                 "기상은 지역 대표점 반경 300 km 안 가까운 NOAA 관측소 10곳의 평균이다."),
+    Dataset("gc19od_countries", "epidemiology", "Google COVID-19 Open Data v3: 비교 국가 통합 표",
+            tuple(f"https://storage.googleapis.com/covid19-open-data/v3/location/{c}.csv"
+                  for c in ("JP", "NZ", "AU", "GB", "DE", "IT", "US", "BR", "IN", "ZA", "SE")),
+            "출력물 CC BY 4.0; 하위 출처별 조건 (README 참조)", "Google Cloud COVID-19 Open Data v3",
+            "v3 (2022-09 갱신 종료)", "국가", "2020-01-01 ~ 2022-09-17 (일별)",
+            note="비교 국가는 지역·소득·정책이 다른 나라로 골랐다 (대한민국 과적합 방지)."),
     Dataset("worldpop_kor_2020_1km", "population", "WorldPop 2020 1km UN-adjusted, Republic of Korea",
             ("https://data.worldpop.org/GIS/Population/Global_2000_2020_1km_UNadj/2020/KOR/kor_ppp_2020_1km_Aggregated_UNadj.tif",),
             "CC BY 4.0", "WorldPop (University of Southampton)", "Global 2000-2020 1km UNadj", "30 arc-sec (~1km) 격자",
