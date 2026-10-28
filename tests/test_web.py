@@ -11,7 +11,7 @@ from seir_sim.web.app import create_app
 
 @pytest.fixture
 def client(tmp_path):
-    app = create_app(job_root=tmp_path / "jobs")
+    app = create_app(job_root=tmp_path / "jobs", user_dir=tmp_path / "user")
     with TestClient(app, headers={"X-SEIR-Client": "web"}) as c:
         yield c
 
@@ -89,7 +89,14 @@ def test_input_validation(client):
     bad = [{**BASE, "method": "euler"}, {**BASE, "n_runs": 0}, {**BASE, "R0": -1}, {**BASE, "days": 99999},
            {**BASE, "unknown": 1}, {**BASE, "dataset": "../etc"}, {**BASE, "seeds": []},
            {**BASE, "interventions": [{"start": 0, "end": 10, "value": 1.5}]},
-           {**BASE, "r0_reference": "region"}]                                       # 기준 지역 없음
+           {**BASE, "r0_reference": "region"},                                       # 기준 지역 없음
+           {**BASE, "seeds": [{"region": "region0", "count": 30000}]},              # 인구(2만)보다 많은 초기 감염
+           {**BASE, "interventions": [{"start": 50, "end": 10, "value": 0.2}]},     # 끝일 < 시작일
+           {**BASE, "disease": {"incubation_days": 0}},
+           {**BASE, "disease": {"unknown": 1}},
+           {**BASE, "climate": "exp_linear"},                                      # 합성 지역에 기후 자료 없음
+           {**BASE, "hybrid_up": 10, "hybrid_down": 20},
+           {**BASE, "seeds": [{"region": "region0", "count": 0, "exposed": 0}]}]
     for b in bad:
         assert client.post("/api/scenarios", json=b).status_code == 422, b
     assert client.post("/api/scenarios", json={**BASE, "dataset": "NoSuchDataset"}).status_code == 422
@@ -137,3 +144,56 @@ def test_dataset_activate_and_rollback_via_api(client, tmp_path, monkeypatch):
     assert s["state"] == "done", s
     sm = client.get(f"/api/jobs/{jid}/summary").json()
     assert [r["id"] for r in sm["regions"]] == ["A", "B", "C"] and len(sm["frames"]["t"]) > 0
+    # 이동·통근을 끄면 A 밖으로 퍼지지 않는다
+    jid = client.post("/api/scenarios", json={**req, "use_mobility": False, "use_commuting": False}).json()["job_id"]
+    assert _wait(client, jid)["state"] == "done"
+    sm = client.get(f"/api/jobs/{jid}/summary").json()
+    assert [r["arrival_probability"] for r in sm["regions"]] == [1.0, 0.0, 0.0]
+    assert any("이동" in w for w in sm["warnings"])
+    # 이동 흐름 (가정 총량 기반이라는 설명 포함)
+    f = client.get("/api/datasets/T/flows?top=5").json()
+    assert len(f["flows"]) == 3 and "실측" in f["note"]
+    assert client.post("/api/scenarios/check", json={**req, "climate": "exp_linear"}).status_code == 422   # 기후 자료 없음
+
+
+def test_check_estimate_disease_params_and_immunity(client):
+    r = client.post("/api/scenarios/check", json=BASE)
+    assert r.status_code == 200 and r.json()["estimate"]["seconds"] >= 0
+    req = {**BASE, "title": "면역 50%", "disease": {"name": "시험병", "incubation_days": 3, "infectious_days": 5, "immunity_days": 0,
+                                                  "f1": 0.02, "M": 4}, "initial_immune_fraction": 0.5,
+           "seeds": [{"region": "region0", "count": 5, "exposed": 5}]}
+    jid = client.post("/api/scenarios", json=req).json()["job_id"]
+    assert _wait(client, jid)["state"] == "done"
+    sm = client.get(f"/api/jobs/{jid}/summary").json()
+    src = sm["labels"]["parameters"]
+    assert src["sigma"] == "사용자 입력" and src["P1"] == "기본 가정값"
+    assert sm["labels"]["disease"]["sigma"] == pytest.approx(1 / 3) and sm["labels"]["disease"]["lam"] == 0.0
+    assert sm["regions"][0]["population"] == pytest.approx(20000)
+    assert sm["regions"][0]["attack_mean"] <= 0.5 + 1e-9                      # 절반은 시작부터 면역
+    for k in ("I", "E", "D", "first", "I_q05", "I_q95"):
+        assert len(sm["frames"][k]) == len(sm["frames"]["t"])
+    for k in ("R_mean", "new_first_mean", "cum_first_mean", "D_q05", "q25", "q75"):
+        assert len(sm["daily"][k]) == len(sm["daily"]["t"])
+    assert client.get(f"/api/jobs/{jid}/export/regions_daily.csv").status_code == 200
+
+
+def test_disease_presets(client):
+    assert client.get("/api/diseases").json() == {}
+    r = client.post("/api/diseases", json={"disease": {"name": "가상병", "incubation_days": 4}, "R0": 1.8, "note": "시험"})
+    assert r.json() == {"saved": "가상병"}
+    d = client.get("/api/diseases").json()
+    assert d["가상병"]["disease"]["incubation_days"] == 4 and d["가상병"]["R0"] == 1.8
+    assert client.post("/api/diseases", json={"disease": {"name": "x", "f1": 2}}).status_code == 422
+    assert client.delete("/api/diseases/가상병").json() == {"deleted": "가상병"}
+    assert client.delete("/api/diseases/가상병").status_code == 404
+
+
+def test_update_policy_endpoints(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("SEIR_SIM_RAW_DIR", str(tmp_path / "raw"))
+    st = client.get("/api/updates").json()
+    assert any(x["id"] == "openflights" for x in st["datasets"])
+    r = client.post("/api/updates/openflights/policy", json={"interval_days": 30, "auto": False})
+    assert r.json() == {"interval_days": 30, "auto": False}
+    assert client.post("/api/updates/openflights/policy", json={"interval_days": 0.5}).status_code in (200, 422)
+    assert client.post("/api/updates/nope/policy", json={"interval_days": 3}).status_code == 404
+    assert client.post("/api/updates/nope/check").status_code == 404

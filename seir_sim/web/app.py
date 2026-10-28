@@ -20,9 +20,12 @@ from .jobs import JobManager
 ROOT = Path(__file__).resolve().parents[2]
 STATIC = Path(__file__).parent / "static"
 NAME = re.compile(r"^[A-Za-z0-9_]{1,40}$")
-EXPORTS = {"daily.csv": "text/csv", "regions.csv": "text/csv", "summary.json": "application/json",
-           "run_record.json": "application/json", "ensemble.nc": "application/x-netcdf",
-           "config.json": "application/json", "result.json": "application/json"}
+EXPORTS = {"daily.csv": "text/csv", "regions.csv": "text/csv", "regions_daily.csv": "text/csv",
+           "summary.json": "application/json", "run_record.json": "application/json",
+           "ensemble.nc": "application/x-netcdf", "config.json": "application/json", "result.json": "application/json",
+           "request.json": "application/json", "summary_daily.parquet": "application/vnd.apache.parquet",
+           "summary_regions.parquet": "application/vnd.apache.parquet"}
+USER_DIR = ROOT / "outputs" / "web_user"
 
 
 CLIENT_HEADER = "x-seir-client"
@@ -30,7 +33,7 @@ LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]", "testserver"]
 
 
 def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_hosts: list[str] | None = None,
-               max_job_seconds: float = 6 * 3600) -> FastAPI:
+               max_job_seconds: float = 6 * 3600, auto_updates: bool = False, user_dir: Path | None = None) -> FastAPI:
     """보안 (로컬 전용)
     - Host 헤더가 허용 목록(기본: 127.0.0.1, localhost)에 없으면 거부한다 (DNS 리바인딩 방지).
     - 상태를 바꾸는 요청(POST, DELETE)은 사용자 지정 헤더 X-SEIR-Client 가 있어야 한다. 다른 사이트의 페이지가 브라우저로
@@ -50,6 +53,13 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
 
     jobs = JobManager(job_root or ROOT / "outputs" / "web_jobs", max_concurrent=max_concurrent, max_seconds=max_job_seconds)
     app.state.jobs = jobs
+    udir = Path(user_dir or USER_DIR)
+    if auto_updates:                       # 사용자가 auto 로 정한 자료 중 기한이 지난 것만 갱신 확인 (기본은 수동)
+        from ..data.updater import Updater
+        up = Updater()
+        for did, pol in up.policy().items():
+            if pol.get("auto") and up.due(did):
+                jobs.submit("update", {"id": did}, f"{did} 자동 갱신 확인")
 
     def _job_dir(job_id):
         try:
@@ -143,28 +153,131 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
         return {"job_id": jid, "check": chk}
 
     # ------------------------------------------------------------------ 작업
-    @app.post("/api/scenarios")
-    def scenario_submit(body: dict = Body(...)):
-        from .scenario import ScenarioRequest, build_config
+    def _check_scenario(body: dict):
+        """요청 검증 + 인구와의 모순 점검 + 계산량 추정. (req, estimate) 또는 HTTPException."""
+        from .scenario import ScenarioRequest, build_config, check_against_populations, estimate_cost
         from ..config.schema import Config
         try:
             req = ScenarioRequest.model_validate(body)
-            Config.model_validate(build_config(req))
         except ValidationError as e:
             raise HTTPException(422, json.loads(e.json(include_url=False)))
-        if req.dataset != "synthetic_single":
+        if req.dataset == "synthetic_single":
+            if req.climate != "none":
+                raise HTTPException(422, "합성 단일 지역에는 기후 자료가 없어 기후 효과를 켤 수 없다")
+            pops = {"region0": float(req.population or 1e6)}
+            req_check = req.model_copy(update={"seeds": [s.model_copy(update={"region": "region0"}) for s in req.seeds]})
+        else:
             from ..data.dataset import RegionDataset
             from ..data.versions import Registry
             if req.dataset not in Registry().list():
                 raise HTTPException(422, f"데이터셋 {req.dataset} 이 저장소에 없다")
-            ids = set(RegionDataset.load(Registry().resolve(req.dataset)).ids)
-            bad = [s.region for s in req.seeds if s.region not in ids]
-            bad += [r for i in req.interventions for r in (i.regions or []) if r not in ids]
-            if req.r0_reference == "region" and req.reference_region not in ids:
-                bad.append(str(req.reference_region))
-            if bad:
-                raise HTTPException(422, f"데이터셋에 없는 지역: {bad[:5]}")
-        return {"job_id": jobs.submit("scenario", req.model_dump(mode="json"), req.title)}
+            ds = RegionDataset.load(Registry().resolve(req.dataset))
+            pops = dict(zip(ds.ids, ds.population.tolist()))
+            if req.climate != "none" and ds.tavg is None:
+                raise HTTPException(422, "이 데이터셋에는 기후 자료가 없어 기후 효과를 켤 수 없다 (미확보)")
+            req_check = req
+        errs = check_against_populations(req_check, pops)
+        if errs:
+            raise HTTPException(422, "; ".join(errs[:5]))
+        try:
+            Config.model_validate(build_config(req, pops))
+        except (ValidationError, ValueError) as e:
+            raise HTTPException(422, str(e)[:500])
+        return req, estimate_cost(req, len(pops), float(sum(v for v in pops.values() if v == v)))
+
+    @app.post("/api/scenarios/check")
+    def scenario_check(body: dict = Body(...)):
+        req, est = _check_scenario(body)
+        return {"ok": True, "estimate": est}
+
+    @app.post("/api/scenarios")
+    def scenario_submit(body: dict = Body(...)):
+        req, est = _check_scenario(body)
+        return {"job_id": jobs.submit("scenario", req.model_dump(mode="json"), req.title), "estimate": est}
+
+    # ------------------------------------------------------------------ 감염병 설정 저장 (사용자 정의)
+    def _diseases() -> dict:
+        p = udir / "diseases.json"
+        return json.loads(p.read_text()) if p.exists() else {}
+
+    @app.get("/api/diseases")
+    def diseases_list():
+        return _diseases()
+
+    @app.post("/api/diseases")
+    def diseases_save(body: dict = Body(...)):
+        from .scenario import DiseaseIn
+        try:
+            dz = DiseaseIn.model_validate(body.get("disease", {}))
+        except ValidationError as e:
+            raise HTTPException(422, json.loads(e.json(include_url=False)))
+        name = dz.name.strip()
+        if not name:
+            raise HTTPException(422, "이름이 필요하다")
+        allp = _diseases()
+        if len(allp) >= 200 and name not in allp:
+            raise HTTPException(422, "저장 개수 상한 (200)")
+        allp[name] = {"disease": dz.model_dump(), "R0": body.get("R0"), "note": str(body.get("note", ""))[:300],
+                      "label": "사용자 입력 (근거는 사용자가 기록한 메모 참고)"}
+        udir.mkdir(parents=True, exist_ok=True)
+        (udir / "diseases.json").write_text(json.dumps(allp, ensure_ascii=False, indent=1))
+        return {"saved": name}
+
+    @app.delete("/api/diseases/{name}")
+    def diseases_delete(name: str):
+        allp = _diseases()
+        if name not in allp:
+            raise HTTPException(404, "없음")
+        del allp[name]
+        (udir / "diseases.json").write_text(json.dumps(allp, ensure_ascii=False, indent=1))
+        return {"deleted": name}
+
+    # ------------------------------------------------------------------ 이동 흐름 (지도 표시용)
+    @app.get("/api/datasets/{name}/flows")
+    def dataset_flows(name: str, top: int = 30):
+        if not NAME.match(name) or not 1 <= top <= 200:
+            raise HTTPException(400, "잘못된 값")
+        import numpy as np
+        from ..data.dataset import RegionDataset
+        from ..data.versions import Registry
+        try:
+            ds = RegionDataset.load(Registry().resolve(name))
+        except KeyError:
+            raise HTTPException(404, "데이터셋 없음")
+        if not np.all(np.isfinite(ds.mobility)):
+            return {"flows": [], "note": "이동 행렬 없음 (인구 미확보)"}
+        F = ds.mobility * np.nan_to_num(ds.population)[:, None]       # 하루 이동 인원 i -> j
+        F = np.triu(F + F.T, 1)                                         # 양방향 합 (균형 이동이라 대칭)
+        idx = np.dstack(np.unravel_index(np.argsort(F, axis=None)[::-1][:top], F.shape))[0]
+        flows = [{"a": ds.ids[i], "b": ds.ids[j], "a_lonlat": [float(ds.lon[i]), float(ds.lat[i])],
+                  "b_lonlat": [float(ds.lon[j]), float(ds.lat[j])], "per_day": float(F[i, j])} for i, j in idx if F[i, j] > 0]
+        a = ds.provenance.get("assumptions", {})
+        return {"flows": flows, "note": f"노선 수 비례 배분 x 가정 총량 (항공 {a.get('air_trips_per_day')} 회/일). 실측 승객 수가 아니다."}
+
+    # ------------------------------------------------------------------ 원자료 갱신
+    @app.get("/api/updates")
+    def updates_status():
+        from ..data.updater import Updater
+        u = Updater()
+        return {"datasets": u.status(), "log": u.log()[-50:]}
+
+    @app.post("/api/updates/{did}/check")
+    def updates_check(did: str):
+        from ..data.registry import DATASETS
+        if did not in DATASETS:
+            raise HTTPException(404, "자료 없음")
+        return {"job_id": jobs.submit("update", {"id": did}, f"{did} 갱신 확인")}
+
+    @app.post("/api/updates/{did}/policy")
+    def updates_policy(did: str, body: dict = Body(...)):
+        from ..data.updater import Updater
+        try:
+            iv = body.get("interval_days")
+            return Updater().set_policy(did, None if iv in (None, "", 0) else int(iv), bool(body.get("auto", False)))
+        except KeyError:
+            raise HTTPException(404, "자료 없음")
+        except (ValueError, TypeError) as e:
+            raise HTTPException(422, str(e))
 
     @app.post("/api/forecasts")
     def forecast_submit(body: dict = Body(...)):

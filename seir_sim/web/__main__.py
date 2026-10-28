@@ -15,7 +15,8 @@ def main():
     ap.add_argument("--max-jobs", type=int, default=1, help="동시에 실행할 작업 수")
     a = ap.parse_args()
     hosts = None if a.host in ("127.0.0.1", "localhost") else ["127.0.0.1", "localhost", a.host]
-    uvicorn.run(create_app(max_concurrent=a.max_jobs, allowed_hosts=hosts), host=a.host, port=a.port, log_level="info")
+    uvicorn.run(create_app(max_concurrent=a.max_jobs, allowed_hosts=hosts, auto_updates=True), host=a.host, port=a.port,
+                log_level="info")
 
 
 if __name__ == "__main__":

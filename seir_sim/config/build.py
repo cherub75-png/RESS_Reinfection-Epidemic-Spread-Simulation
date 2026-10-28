@@ -85,6 +85,14 @@ def c0_all_bases(R0: float, base: EpiParams, system: ReactionSystem, regions: Re
 
 def build_scenario(cfg: Config) -> Scenario:
     regions = build_regions(cfg)
+    if not cfg.regions.use_mobility or not cfg.regions.use_commuting:
+        from dataclasses import replace
+        K = regions.K
+        regions = replace(regions,
+                          mobility=regions.mobility if cfg.regions.use_mobility else np.zeros((K, K)),
+                          contact=regions.contact if cfg.regions.use_commuting else np.eye(K),
+                          provenance={**regions.provenance, "mobility_off": not cfg.regions.use_mobility,
+                                      "commuting_off": not cfg.regions.use_commuting})
     d = cfg.disease
     environment = None
     if cfg.environment.source == "dataset":

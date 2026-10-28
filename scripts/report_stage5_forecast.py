@@ -24,13 +24,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 OUT = ROOT / "outputs" / "stage5"
 FIRST_ORIGIN, LAST_ORIGIN = "2020-07-05", "2022-12-25"
+LOCO = ("KOR",)                    # 국가 제외 학습 비교 대상
 CORE = ["persistence", "trend", "seir", "ml", "hybrid"]
 ALL_METHODS = ["persistence", "trend", "seasonal52", "seir", "ml", "hybrid"]
 VARS = {"cases": "lc0", "deaths": "ld0"}
 PERIODS = [("pre-Delta", "2020-07-01", "2021-06-30"), ("Delta(근사)", "2021-07-01", "2021-11-30"),
            ("Omicron(근사)", "2021-12-01", "2023-01-31")]
 LABEL = {"persistence": "지속", "trend": "감쇠 추세", "seasonal52": "52주 계절", "seir": "보정 SEIR",
-         "ml": "ML (분위수 GBM)", "hybrid": "SEIR+ML 잔차"}
+         "ml": "ML (분위수 GBM)", "hybrid": "SEIR+ML 잔차", "ml_loco": "ML (그 나라 제외 학습)"}
 G = {}
 
 
@@ -73,9 +74,15 @@ def origin_task(t):
     t = pd.Timestamp(t)
     rows, info = [], {"origin": str(t.date())}
     for var, base in VARS.items():
-        train = pd.concat([training_rows(G["feat"][c], G["s7"][var][c], t, base=base) for c in G["countries"]])
+        parts = {c: training_rows(G["feat"][c], G["s7"][var][c], t, base=base) for c in G["countries"]}
+        train = pd.concat(parts.values())
         models = fit_ml(train)
         info[f"ml_rows_{var}"] = len(train)
+        loco = {}
+        if var == "cases":                         # 국가 제외 학습: 그 나라 자료 없이 학습한 모형으로 그 나라 예측
+            for c in LOCO:
+                if c in parts:
+                    loco[c] = fit_ml(pd.concat([v for k, v in parts.items() if k != c]))
         hr = []
         for c in G["countries"]:
             for s in G["origins"][G["origins"] < t]:
@@ -98,6 +105,8 @@ def origin_task(t):
             preds = {m: baseline_forecast(hist, m) for m in ("persistence", "trend", "seasonal52")}
             X0 = origin_rows(G["feat"][c], t)
             preds["ml"] = ml_predict(models, X0, base)
+            if c in loco:
+                preds["ml_loco"] = ml_predict(loco[c], X0, base)
             r = G["seir"].get((c, t))
             seir_q = np.asarray(r[f"{var}_q"]) if (r is not None and f"{var}_q" in r) else None
             preds["seir"] = seir_q
@@ -325,6 +334,16 @@ def report(df, raw, infos, missing, a, wall):
         first = h[h["hybrid_active"]]["origin"].min()
         L += [f"하이브리드 보정이 실제로 적용된 행 비율 {h['hybrid_active'].mean():.2f} (첫 적용 기점 {first.date() if pd.notna(first) else '-'}; "
               "그 전에는 학습 행이 부족해 SEIR 분위수를 그대로 씀).", ""]
+    lo = common(df[df["iso3"].isin(LOCO)], ["persistence", "ml", "ml_loco"])
+    if len(lo):
+        L += ["## 부가: 국가 제외 학습 ML (그 나라 자료 없이 학습 → 그 나라 예측, 확진)", "",
+              "| 국가 | 예측 주 | n | 상대 로그 WIS: ML (전체 학습) | ML (그 나라 제외) |", "|---|---|---|---|---|"]
+        rep["ml_loco"] = {}
+        for (c, h), g in lo.groupby(["iso3", "h"]):
+            m_ = g.groupby("method")["wis_log"].mean()
+            rep["ml_loco"][f"{c}|{h}"] = {"ml": float(m_["ml"] / m_["persistence"]), "ml_loco": float(m_["ml_loco"] / m_["persistence"])}
+            L.append(f"| {c} | {h} | {int((g['method'] == 'ml').sum())} | {m_['ml'] / m_['persistence']:.3f} | {m_['ml_loco'] / m_['persistence']:.3f} |")
+        L.append("")
     kc = knot_comparison(df, a.knot)
     if kc:
         rep["knot_comparison"] = kc

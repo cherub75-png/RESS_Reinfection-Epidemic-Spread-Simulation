@@ -33,7 +33,7 @@ def write_status(job_dir: Path, **kw) -> None:
     tmp.replace(p)
 
 
-PASS_ENV = ("SEIR_SIM_DATASET_STORE",)
+PASS_ENV = ("SEIR_SIM_DATASET_STORE", "SEIR_SIM_RAW_DIR")
 
 
 def _job_main(kind: str, job_dir: str, env: dict | None = None) -> None:
@@ -58,6 +58,12 @@ def _job_main(kind: str, job_dir: str, env: dict | None = None) -> None:
             from ..forecast.operational import latest_forecast
             out = latest_forecast(req["iso3"], req.get("origin"), log=lambda m: write_status(d, message=m))
             (d / "result.json").write_text(json.dumps(out, ensure_ascii=False))
+        elif kind == "update":
+            from ..data.updater import Updater
+            out = Updater().check_update(req["id"])
+            (d / "result.json").write_text(json.dumps(out, ensure_ascii=False, default=str))
+            if out["result"] == "failed":
+                raise RuntimeError(out.get("message", "갱신 실패"))
         elif kind == "dataset":
             from .datasets import build_and_register
             out = build_and_register(req, d)

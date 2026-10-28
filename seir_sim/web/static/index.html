@@ -12,65 +12,132 @@
   <h1>재감염 SEIR 전파 시뮬레이터</h1>
   <span class="sub">로컬 실행판 · 공개 배포 아님</span>
   <span class="spacer"></span>
-  <label class="small" style="flex-direction:row;align-items:center;gap:6px;margin:0">화면
+  <label class="small inline">화면
     <select id="theme"><option value="">시스템</option><option value="light">밝게</option><option value="dark">어둡게</option></select>
   </label>
 </header>
 <nav role="tablist" id="tabs">
-  <button role="tab" data-tab="run" aria-selected="true">시나리오 실행</button>
+  <button role="tab" data-tab="home" aria-selected="true">홈</button>
+  <button role="tab" data-tab="run">새 시뮬레이션</button>
   <button role="tab" data-tab="results">결과·비교</button>
   <button role="tab" data-tab="validation">예측 검증</button>
   <button role="tab" data-tab="latest">최신 자료 예측</button>
   <button role="tab" data-tab="data">데이터 관리</button>
-  <button role="tab" data-tab="sources">자료 출처·가정</button>
-  <button role="tab" data-tab="help">도움말</button>
+  <button role="tab" data-tab="sources">자료 출처·갱신</button>
+  <button role="tab" data-tab="help">도움말·한계</button>
 </nav>
 <main>
-  <!-- 시나리오 실행 -->
-  <section id="tab-run">
-    <h2>시나리오 실행 <span class="badge scenario">시나리오 = 가정에 따른 결과 (예측 아님)</span></h2>
-    <div class="warn" id="disease-label">감염병 매개변수는 COVID 유사 코드 검증용 가정값이며 실제 추정치가 아니다.</div>
-    <form id="scenario-form" autocomplete="off">
-      <fieldset><legend>기본</legend>
+  <!-- 홈 -->
+  <section id="tab-home">
+    <h2>재감염 SEIR 전파 시뮬레이터</h2>
+    <p>감염병의 특성과 초기 발생 조건을 넣으면 실제 경계·인구·이동망 위에서 시간에 따른 확산을 계산하고 지도와 그래프로 보여 준다. 재감염(감염 횟수별 감수성·전파력·치명률), 면역 소실, 사망을 포함한다.</p>
+    <div class="grid3">
+      <div class="card"><strong>1. 새 시뮬레이션</strong><p class="note">감염병 매개변수, 초기 감염 위치·인원, 지역 간 이동, 방역 조건을 정하고 실행한다.</p>
+        <button class="primary" data-goto="run">시작하기</button></div>
+      <div class="card"><strong>2. 결과·비교</strong><p class="note">지도 애니메이션, 지역별 통계, 그래프, 시나리오 비교, 내보내기.</p>
+        <button class="secondary" data-goto="results">저장된 결과</button></div>
+      <div class="card"><strong>3. 예측 검증</strong><p class="note">COVID-19 12개국 자료로 잰 과거 예측 성능 (지속 예측·ML·보정 SEIR 비교).</p>
+        <button class="secondary" data-goto="validation">검증 결과</button></div>
+    </div>
+    <h3>값의 종류 표시</h3>
+    <div class="tablewrap"><table>
+      <tr><th>표시</th><th>뜻</th></tr>
+      <tr><td><span class="tag obs">실제 관측</span></td><td>공식·공개 자료의 원값 (출처는 "자료 출처·갱신")</td></tr>
+      <tr><td><span class="tag sec">2차 자료</span></td><td>원출처가 기록되지 않은 집계 (예: 대한민국 시도 인구)</td></tr>
+      <tr><td><span class="tag est">추정값</span></td><td>실제 자료로 추정한 값 (예: 3단계 u(t), 보고 지연)</td></tr>
+      <tr><td><span class="tag user">사용자 입력</span></td><td>이 화면에서 사용자가 넣은 값</td></tr>
+      <tr><td><span class="tag asm">기본 가정값</span></td><td>근거 자료 없이 정한 기본값 (COVID 유사 코드 검증용, 항공 이동 규모 등)</td></tr>
+      <tr><td><span class="tag sim">시뮬레이션 결과</span></td><td>가정에 따른 계산 결과 (예측 아님)</td></tr>
+      <tr><td><span class="tag fc">검증된 예측</span></td><td>과거 자료로 성능을 잰 방법의 예측 (성능은 "예측 검증" 참고)</td></tr>
+    </table></div>
+    <div class="warn">이 도구는 연구·시나리오 분석용이다. 실제 자료로 보정하지 않은 매개변수, 가정에 의존하는 이동망, 검증되지 않은 새 감염병의 결과는 미래를 예측한 값이 아니다.</div>
+    <h3>최근 작업</h3><div class="tablewrap"><table id="home-jobs"></table></div>
+  </section>
+
+  <!-- 새 시뮬레이션 -->
+  <section id="tab-run" hidden>
+    <h2>새 시뮬레이션 <span class="tag sim">시나리오 = 가정에 따른 결과</span></h2>
+    <form id="scenario-form" autocomplete="off" novalidate>
+      <fieldset><legend>1. 기본</legend>
         <label>제목 <input name="title" value="시나리오" maxlength="80"></label>
-        <label>지역 데이터셋 <select name="dataset" id="f-dataset"></select></label>
+        <label>지역 데이터셋 (공간 해상도) <select name="dataset" id="f-dataset"></select></label>
         <label id="f-pop-wrap" hidden>인구 (합성 단일 지역) <input type="number" name="population" value="1000000" min="1"></label>
         <label>시작일 <input type="date" name="start_date" value="2020-01-20"></label>
         <label>기간 (일) <input type="number" name="days" value="180" min="1" max="1095"></label>
         <div class="note" id="f-dataset-note"></div>
       </fieldset>
-      <fieldset><legend>전파력</legend>
-        <label>R0 <input type="number" name="R0" value="2.5" step="0.1" min="0.1" max="20"></label>
+
+      <fieldset><legend>2. 감염병 특성</legend>
+        <div class="flex">
+          <label>저장된 설정 <select id="dz-presets"><option value="">(기본 가정값: COVID 유사)</option></select></label>
+          <button type="button" class="secondary" id="dz-load">불러오기</button>
+          <button type="button" class="secondary" id="dz-save">현재 설정 저장</button>
+          <button type="button" class="secondary" id="dz-del">삭제</button>
+        </div>
+        <label>감염병 이름 <input name="dz_name" value="사용자 정의" maxlength="60"></label>
+        <label>유형 <select name="dz_kind"><option value="respiratory">호흡기 전파</option><option value="contact">접촉 전파</option>
+          <option value="vector">매개체 전파</option><option value="other">기타</option></select></label>
+        <div class="params" id="dz-basic"></div>
+        <details><summary>고급 매개변수 (재감염·전파력·치명률 구조)</summary><div class="params" id="dz-adv"></div></details>
+        <p class="note" id="dz-derived"></p>
+        <p class="note">R0 와 전파율 c0 의 관계는 모형 구조에 따라 다르다. 여기서는 선택한 R0 기준(아래 4절)으로 c0 를 정하고, 나머지 매개변수(잠복기, 감염 기간, 재감염 구조)는 R0 로 정해지지 않으므로 따로 넣는다. 비워 둔 칸은 <span class="tag asm">기본 가정값</span>이다.</p>
+      </fieldset>
+
+      <fieldset><legend>3. 초기 발생 조건</legend>
+        <div class="grid2">
+          <div><div class="rows" id="f-seeds"></div>
+            <button type="button" class="secondary" id="add-seed">+ 발생 지역</button>
+            <label>시작 시 면역(보호) 비율 % (모든 지역) <input type="number" name="immune_pct" value="0" min="0" max="99" step="1"></label>
+            <p class="note">I = 감염 중(전파 가능), E = 잠복(아직 전파 안 함). 지도에서 지역을 누르면 발생 지역으로 추가된다.</p></div>
+          <div><div id="seed-map" class="map small-map"></div></div>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>4. 공간·환경</legend>
+        <label class="inline"><input type="checkbox" name="use_mobility" checked> 지역 간 이동 (항공)</label>
+        <label class="inline"><input type="checkbox" name="use_commuting" checked> 지역 간 접촉 (통근)</label>
+        <label>밀도 지수 η (h = (ρ/ρ_ref)^η) <input type="number" name="eta" value="0.2" step="0.05" min="0" max="2"></label>
         <label>R0 기준 <select name="r0_reference" id="f-basis">
-          <option value="reference">reference (기본)</option>
-          <option value="region">기준 지역 선택</option>
-          <option value="origin">원점 지역 (비교용)</option>
-          <option value="population_mean">인구가중 평균 (비교용)</option>
+          <option value="reference">reference (기본)</option><option value="region">기준 지역 선택</option>
+          <option value="origin">원점 지역 (비교용)</option><option value="population_mean">인구가중 평균 (비교용)</option>
           <option value="network">지역망 스펙트럼 반지름</option></select></label>
         <label id="f-refreg-wrap" hidden>기준 지역 <select name="reference_region" id="f-refreg"></select></label>
-        <label>밀도 지수 η (h = (ρ/ρ_ref)^η) <input type="number" name="eta" value="0.2" step="0.05" min="0" max="2"></label>
-        <p class="note">어느 기준이든 c0 하나를 모든 지역에 쓴다. 지역 간 상대 전파력은 바꾸지 않는다. 모든 기준의 값은 결과에 함께 기록된다.</p>
+        <div><label>기후 효과 <select name="climate" id="f-climate"><option value="none">없음 (기본, g = 1)</option>
+          <option value="exp_linear">사용자 가정: g = exp(a_T (T − T_ref) + a_H (H − H_ref))</option></select></label>
+          <span id="f-climate-params" hidden>
+            <label>a_T <input type="number" name="climate_a_T" value="-0.02" step="0.005" min="-1" max="1"></label>
+            <label>a_H <input type="number" name="climate_a_H" value="0" step="0.005" min="-1" max="1"></label>
+            <label>T_ref °C <input type="number" name="climate_T_ref" value="15" step="1"></label>
+            <label>H_ref % <input type="number" name="climate_H_ref" value="60" step="1"></label></span>
+          <p class="note" id="f-climate-note">기후 효과는 실제 자료로 추정하지 않았다. 켜면 사용자 가정값으로 표시된다.</p></div>
       </fieldset>
-      <fieldset><legend>계산 방법</legend>
+
+      <fieldset><legend>5. 방역·개입 u(t) (접촉 감소 비율 0~1, 구간 [시작일, 끝일))</legend>
+        <div class="rows" id="f-ints"></div>
+        <button type="button" class="secondary" id="add-int">+ 개입 구간</button>
+        <p class="note">백신 구획은 방정식에 없다. 백신 효과는 시작 시 면역 비율이나 접촉 감소 u 로 근사해야 하며, 그 경우 가정임을 기록한다.</p>
+      </fieldset>
+
+      <details><summary>6. 계산 설정 (고급)</summary><fieldset>
         <label>방법 <select name="method">
           <option value="hybrid">하이브리드 (기본)</option><option value="tau">tau-leaping</option>
           <option value="ctmc">정확한 CTMC (느림)</option><option value="sde">SDE</option><option value="ode">ODE (결정론, 1회)</option></select></label>
         <label>실행 횟수 <input type="number" name="n_runs" value="20" min="1" max="500"></label>
         <label>작업자 수 <input type="number" name="n_workers" value="1" min="1" max="4"></label>
         <label>난수 시드 <input type="number" name="seed" value="20260101" min="0"></label>
-      </fieldset>
-      <fieldset><legend>초기 감염 (I₁)</legend>
-        <div class="rows" id="f-seeds"></div>
-        <button type="button" class="secondary" id="add-seed">+ 초기 감염 지역</button>
-      </fieldset>
-      <fieldset><legend>개입 u(t) (접촉 감소 비율 0~1, 구간 [시작일, 끝일))</legend>
-        <div class="rows" id="f-ints"></div>
-        <button type="button" class="secondary" id="add-int">+ 개입 구간</button>
-      </fieldset>
-      <div class="flex">
+        <label>tau-leap ε <input type="number" name="tau_leap_epsilon" value="0.01" step="0.001" min="0.0005" max="0.1"></label>
+        <label>SDE 시간 간격 (일) <input type="number" name="sde_dt" value="0.05" step="0.01" min="0.001" max="1"></label>
+        <label>하이브리드 전환 (올림 / 내림) <span class="flex"><input type="number" name="hybrid_up" value="100" min="2"><input type="number" name="hybrid_down" value="50" min="1"></span></label>
+        <p class="note">ε 가 작을수록 정확하고 느리다 (최종 규모 같은 누적 지표는 0.003 권장, 검증: 데이터 관리 아래 보고서 D007_D004).</p>
+      </fieldset></details>
+
+      <div class="flex" style="margin-top:8px">
+        <button type="button" class="secondary" id="check-btn">점검·예상 계산량</button>
         <button type="submit" class="primary" id="run-btn">실행</button>
-        <span class="note" id="run-msg"></span>
+        <button type="button" class="secondary" id="save-cfg">설정 파일 저장 (JSON)</button>
+        <label class="inline small">설정 파일 불러오기 <input type="file" id="load-cfg" accept=".json,application/json"></label>
       </div>
+      <div id="run-msg" class="note" role="status"></div>
     </form>
     <div id="run-progress" hidden class="card" style="margin-top:12px">
       <div class="flex"><strong id="rp-title"></strong><span class="note" id="rp-state"></span><span class="spacer"></span>
@@ -81,43 +148,62 @@
 
   <!-- 결과·비교 -->
   <section id="tab-results" hidden>
-    <h2>결과·비교 <span class="badge scenario">시나리오 결과</span></h2>
+    <h2>결과·비교 <span class="tag sim">시뮬레이션 결과</span></h2>
     <div class="grid2">
-      <div class="card"><h3 style="margin-top:0">저장된 작업</h3>
+      <div class="card"><h3 class="mt0">저장된 작업</h3>
         <div class="tablewrap"><table id="jobs-table"><thead><tr><th>비교</th><th>제목</th><th>종류</th><th>상태</th><th>만든 시각 (UTC)</th></tr></thead><tbody></tbody></table></div>
         <div class="flex" style="margin-top:8px"><button class="secondary" id="compare-btn">선택한 시나리오 비교 (최대 5개)</button>
           <button class="secondary" id="refresh-jobs">새로 고침</button></div>
       </div>
-      <div class="card" id="compare-card" hidden><h3 style="margin-top:0">시나리오 비교: 전체 감염 중 I (중앙값)</h3>
+      <div class="card" id="compare-card" hidden><h3 class="mt0">시나리오 비교: 전체 감염 중 I (중앙값)</h3>
         <div class="chartlegend" id="compare-legend"></div><div class="chart" id="compare-chart"></div>
-        <div class="tablewrap"><table id="compare-table"></table></div></div>
+        <div class="tablewrap"><table id="compare-table"></table></div>
+        <button class="secondary" id="compare-csv">비교 표 CSV 내보내기</button></div>
     </div>
     <div id="result-view" hidden>
-      <h3 id="rv-title"></h3>
+      <div class="flex"><h3 id="rv-title"></h3><span class="spacer"></span><button class="secondary" id="rv-reuse">이 설정으로 새 시뮬레이션</button></div>
       <div id="rv-warnings"></div>
       <div class="tiles" id="rv-tiles"></div>
-      <div class="grid2">
-        <div class="card"><div class="flex"><strong>지역별 유병 (10만 명당, 실행 평균)</strong><span class="spacer"></span>
-          <button class="secondary" id="play-btn" aria-label="재생">재생</button></div>
+      <div class="grid2 wide-left">
+        <div class="card"><div class="flex"><strong>지도</strong>
+          <label class="inline small">값 <select id="map-layer">
+            <option value="I">감염 중 I (모형 실제 감염)</option><option value="E">잠복 E</option><option value="D">누적 사망 D</option>
+            <option value="first">첫 감염 누적 비율</option><option value="arrival">도착일 (I ≥ 1 중앙값)</option></select></label>
+          <label class="inline small">단위 <select id="map-scale"><option value="per100k">10만 명당</option><option value="abs">절대 인원</option></select></label>
+          <label class="inline small"><input type="checkbox" id="map-flows"> 이동망</label></div>
           <div id="map" class="map"></div>
-          <div class="flex small" style="margin-top:6px"><input type="range" id="frame-slider" min="0" max="0" value="0" style="flex:1">
+          <div class="flex small" style="margin-top:6px"><button class="secondary" id="play-btn">재생</button>
+            <select id="play-speed" aria-label="재생 속도"><option value="400">0.5배</option><option value="200" selected>1배</option><option value="100">2배</option><option value="50">4배</option></select>
+            <input type="range" id="frame-slider" min="0" max="0" value="0" style="flex:1" aria-label="시점">
             <span id="frame-label" class="muted"></span></div>
           <div class="maplegend" id="map-legend"></div>
+          <p class="note" id="map-def"></p>
+          <div class="flex"><button class="secondary" id="map-svg">지도 이미지 (SVG)</button></div>
         </div>
-        <div class="card"><strong>전체 감염 중 I(t): 중앙값, 평균, 5–95% 구간</strong>
+        <div class="card"><div class="flex"><strong>그래프</strong>
+          <label class="inline small"><select id="chart-kind">
+            <option value="I">전체 감염 중 I(t)</option><option value="new">일별 신규 첫 감염</option><option value="cum">누적 첫 감염</option>
+            <option value="RD">회복·면역 R 과 누적 사망 D</option><option value="region">선택 지역 비교</option></select></label>
+          <label class="inline small">구간 <select id="chart-band"><option value="90">5–95%</option><option value="50">25–75%</option></select></label></div>
           <div class="chartlegend" id="ts-legend"></div><div class="chart" id="ts-chart"></div>
-          <h3>R0 기준별 기록</h3><div class="tablewrap"><table id="rv-r0"></table></div>
-          <h3>내보내기</h3><div class="flex" id="rv-exports"></div>
+          <p class="note" id="ts-note"></p>
+          <button class="secondary" id="chart-svg">그래프 이미지 (SVG)</button>
+          <div id="region-detail" hidden><h3 id="rd-title"></h3><div class="chartlegend" id="rd-legend"></div><div class="chart" id="rd-chart"></div><div id="rd-stats" class="small"></div></div>
         </div>
       </div>
-      <h3>지역별 결과</h3>
+      <div class="grid2">
+        <div class="card"><h3 class="mt0">매개변수와 출처</h3><div class="tablewrap"><table id="rv-params"></table></div></div>
+        <div class="card"><h3 class="mt0">R0 기준별 기록</h3><div class="tablewrap"><table id="rv-r0"></table></div>
+          <h3>내보내기</h3><div class="flex" id="rv-exports"></div></div>
+      </div>
+      <h3>지역별 결과 (열 이름을 누르면 정렬, 행을 누르면 지역 상세)</h3>
       <div class="tablewrap"><table id="rv-regions"></table></div>
     </div>
   </section>
 
   <!-- 예측 검증 -->
   <section id="tab-validation" hidden>
-    <h2>예측 검증 <span class="badge validation">과거 자료로 잰 성능</span></h2>
+    <h2>예측 검증 <span class="tag fc">과거 자료로 잰 성능</span></h2>
     <div class="warn">각 기점에서 그날까지의 자료만으로 만든 예측을 나중의 실제 관측과 비교한 결과다. 이 12개국·이 기간의 결과이며 다른 시기·병원체의 정확도를 보장하지 않는다. 자료는 나중에 정정된 최종판이라 실시간 성능보다 낙관적일 수 있다.</div>
     <div id="val-content"><p class="note">불러오는 중…</p></div>
     <h3>국가별 과거 예측 보기</h3>
@@ -129,7 +215,7 @@
 
   <!-- 최신 자료 예측 -->
   <section id="tab-latest" hidden>
-    <h2>최신 자료 예측 <span class="badge forecast">예측 (기점 이후 4주)</span></h2>
+    <h2>최신 자료 예측 <span class="tag fc">예측 (기점 이후 4주)</span></h2>
     <div class="warn">이 저장소가 받은 확진·사망 자료(JHU CSSE)는 2023-03-09 에 끝난다. 따라서 여기서 만드는 예측은 그 시점 기준이며 오늘의 예측이 아니다.</div>
     <div class="flex"><label>국가 <select id="lf-country"></select></label><button class="primary" id="lf-run">예측 실행</button><span class="note" id="lf-msg"></span></div>
     <div id="lf-progress" hidden class="progress"><div id="lf-bar"></div></div>
@@ -141,38 +227,51 @@
     <h2>데이터 관리 (버전·검증·활성화·되돌리기)</h2>
     <div id="ds-content"></div>
     <h3>인구표로 새 버전 만들기 (1급 행정구역 데이터셋)</h3>
-    <p class="note">CSV 열: <code>id,population,source[,tier,reference_date,note]</code>. 출처(source)가 없는 행은 받지 않는다. 새 버전은 등록만 되고, 검증 결과와 바뀐 점을 확인한 뒤 직접 활성화한다.</p>
+    <p class="note">CSV 열: <code>id,population,source[,tier,reference_date,note]</code>. 출처(source)가 없는 행은 받지 않는다. 새 버전은 등록만 되고, 검증 결과와 바뀐 점을 확인한 뒤 직접 활성화한다. 문제가 있으면 이전 활성 버전으로 되돌린다.</p>
     <div class="flex"><label>데이터셋 <select id="up-name"></select></label><label>파일 <input type="file" id="up-file" accept=".csv,text/csv"></label><label>메모 <input id="up-note" maxlength="200"></label></div>
     <textarea id="up-text" placeholder="또는 CSV 를 붙여 넣기"></textarea>
     <div class="flex"><button class="primary" id="up-btn">새 버전 만들기</button><span class="note" id="up-msg"></span></div>
   </section>
 
-  <!-- 자료 출처 -->
+  <!-- 자료 출처·갱신 -->
   <section id="tab-sources" hidden>
-    <h2>자료 출처·가정</h2>
-    <p class="note">실제 관측 자료, 2차 자료, 가정값, 추정값, 예측값을 구분해 표시한다. 미확보 자료는 미확보로 둔다.</p>
-    <h3>외부 자료</h3><div class="tablewrap"><table id="src-table"></table></div>
+    <h2>자료 출처·갱신</h2>
+    <p class="note">실제 관측 자료, 2차 자료, 가정값을 구분한다. 받지 못한 자료는 미확보로 둔다. 갱신 확인은 새 파일을 임시 폴더에 받아 SHA-256 을 비교하며, 실패하면 기존 자료를 그대로 쓴다. 바뀐 원자료는 이전 판을 보관한 뒤 교체한다.</p>
+    <h3>외부 자료와 갱신 상태</h3><div class="tablewrap"><table id="src-table"></table></div>
+    <h3>최근 갱신 기록</h3><div class="tablewrap"><table id="upd-log"></table></div>
     <h3>가정값 (자료 아님)</h3><div class="tablewrap"><table id="asm-table"></table></div>
   </section>
 
   <!-- 도움말 -->
   <section id="tab-help" hidden>
-    <h2>도움말</h2>
+    <h2>도움말·모형의 한계</h2>
     <div class="card">
-      <h3 style="margin-top:0">세 가지 결과의 차이</h3>
+      <h3 class="mt0">세 가지 결과의 차이</h3>
       <ul>
         <li><strong>시나리오</strong>: 사용자가 정한 R0·개입·초기 감염으로 방정식을 푼 결과. "이렇게 가정하면 이렇게 된다" 이며 예측이 아니다.</li>
         <li><strong>예측 검증</strong>: 과거 각 시점에서 그때까지의 자료만으로 만든 예측을 실제와 비교한 성능.</li>
         <li><strong>최신 자료 예측</strong>: 가장 최근 자료 기점에서 다음 4주를 예측한 값 (자료가 끝난 시점 기준).</li>
       </ul>
+      <h3>지도와 그래프의 값</h3>
+      <ul>
+        <li>시나리오 지도의 I, E 는 모형 안의 실제 감염 상태다. 관측 확진자 수가 아니다 (확진 = 보고율 × 발병 + 지연, 3단계 관측 모형).</li>
+        <li>"10만 명당" 은 지역 인구 대비, "절대 인원" 은 사람 수다. 인구가 큰 지역이 절대 인원에서 크게 보일 수 있다.</li>
+        <li>값은 확률적 실행들의 평균이며, 그래프 띠는 실행 간 분포(5–95% 또는 25–75%)다.</li>
+      </ul>
       <h3>계산 방법</h3>
       <ul>
         <li>ODE: 결정론적 평균 궤적 (1회). CTMC: 정확한 확률 경로 (느림). tau-leaping, SDE: 근사. 하이브리드: 감염자가 적은 지역은 정확한 사건, 많은 지역은 tau-leaping.</li>
-        <li>R0 기준: reference (기준 밀도·g = 1·u = 0 의 단일 지역), 기준 지역, 원점 지역, 인구가중 평균, 지역망.</li>
+        <li>R0 기준: reference (기준 밀도·g = 1·u = 0 의 단일 지역), 기준 지역, 원점 지역, 인구가중 평균, 지역망. 어느 기준이든 c0 하나를 모든 지역에 쓴다.</li>
       </ul>
-      <h3>모형</h3>
-      <p class="note">방정식·기호: 저장소의 <code>docs/MODEL.md</code>. 결정 기록: <code>docs/DECISIONS.md</code>. 검증 보고: <code>docs/VALIDATION_REPORT.md</code>.</p>
-      <p class="note">API 문서: <a href="/api/docs">/api/docs</a></p>
+      <h3>한계</h3>
+      <ul>
+        <li>방정식에 백신·변이·연령 구조·해외 유입 항이 없다.</li>
+        <li>감염병 기본값은 COVID 유사 코드 검증용 가정이다. 새 감염병의 특성을 이름만으로 알 수 없으며, 사용자가 넣은 값의 근거를 메모로 남겨야 한다.</li>
+        <li>항공 이동 규모, 통근 비율, 접촉 비율은 가정값이다. 대한민국 시도 인구는 2차 자료다.</li>
+        <li>기후 효과는 추정하지 않았다. 기후 자료는 대한민국 시도의 2020~2022 월 평균(관측소 기반)만 있다.</li>
+        <li>예측 성능은 12개국 2020-07 ~ 2023-01 과거 검증 결과다.</li>
+      </ul>
+      <p class="note">모형 정의: <code>docs/MODEL.md</code> · 결정 기록: <code>docs/DECISIONS.md</code> · 검증 보고: <code>docs/VALIDATION_REPORT.md</code> · API 문서: <a href="/api/docs">/api/docs</a></p>
     </div>
   </section>
 </main>

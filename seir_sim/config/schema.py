@@ -98,6 +98,8 @@ class Regions(Strict):
     mobility_scale: Num = 1e-3
     self_contact: Num = 0.8
     path: str | None = None
+    use_mobility: bool = True          # False: 지역 간 이동(omega) 을 끈다 (이동 0)
+    use_commuting: bool = True         # False: 지역 간 접촉(통근) 을 끈다 (C = 단위 행렬)
 
 
 class ContactModel(Strict):
