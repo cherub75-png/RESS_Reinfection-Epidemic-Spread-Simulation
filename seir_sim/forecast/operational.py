@@ -79,6 +79,10 @@ def latest_forecast(iso3: str, origin=None, knot: int = 14, countries=None, n_sa
     r = rolling_country(iso3, p, [t], RollingSpec(knot_days=knot, n_samples=n_samples), resume=prev[-1], log=log)[0]
     out["seir_fit"] = {k: r[k] for k in ("success", "hessian_pd", "n_free", "wall_s", "Rt_last", "Rt_last_capped")}
     out["seir_fit"]["resumed_from"] = prev[-1]["origin"]
+    if not r["success"]:
+        out["warnings"].append("SEIR 재추정이 최적화 수렴 기준을 만족하지 못했다 (반복 상한 또는 선 탐색 실패). SEIR·하이브리드 예측은 해석에 주의한다.")
+    if r["Rt_last_capped"]:
+        out["warnings"].append("마지막 구간 R_t 가 상한(R0_max)에 닿았다. 실제 전파력이 더 클 수 있다.")
     for var, base in (("cases", "lc0"), ("deaths", "ld0")):
         q = np.asarray(r[f"{var}_q"])
         out["methods"].setdefault("seir", {})[var] = q.tolist()
