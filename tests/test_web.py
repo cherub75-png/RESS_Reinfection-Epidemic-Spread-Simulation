@@ -12,8 +12,24 @@ from seir_sim.web.app import create_app
 @pytest.fixture
 def client(tmp_path):
     app = create_app(job_root=tmp_path / "jobs")
-    with TestClient(app) as c:
+    with TestClient(app, headers={"X-SEIR-Client": "web"}) as c:
         yield c
+
+
+def test_security_host_and_client_header(tmp_path):
+    app = create_app(job_root=tmp_path / "jobs")
+    with TestClient(app) as c:
+        # 헤더 없는 상태 변경 요청 (다른 사이트의 폼·단순 요청 흉내) 거부
+        assert c.post("/api/scenarios", json=BASE).status_code == 403
+        assert c.delete("/api/jobs/" + "0" * 32).status_code == 403
+        assert c.post("/api/datasets/T/rollback").status_code == 403
+        assert c.get("/api/health").status_code == 200                       # 읽기는 허용
+        # 허용되지 않은 Host (DNS 리바인딩 흉내) 거부
+        assert c.get("/api/health", headers={"Host": "evil.example"}).status_code == 400
+        # CORS 를 허용하지 않는다 (사전 요청에 허용 헤더가 없음)
+        r = c.options("/api/scenarios", headers={"Origin": "http://evil.example", "Access-Control-Request-Method": "POST",
+                                                 "Access-Control-Request-Headers": "x-seir-client"})
+        assert "access-control-allow-origin" not in {k.lower() for k in r.headers}
 
 
 def _wait(c, jid, timeout=300):

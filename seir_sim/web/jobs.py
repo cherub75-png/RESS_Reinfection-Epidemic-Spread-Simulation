@@ -75,8 +75,9 @@ def _job_main(kind: str, job_dir: str, env: dict | None = None) -> None:
 
 
 class JobManager:
-    def __init__(self, root: Path, max_concurrent: int = 1):
+    def __init__(self, root: Path, max_concurrent: int = 1, max_seconds: float = 6 * 3600):
         self.root = Path(root)
+        self.max_seconds = max_seconds
         self.root.mkdir(parents=True, exist_ok=True)
         self.max_concurrent = max_concurrent
         self.q: queue.Queue = queue.Queue()
@@ -121,7 +122,11 @@ class JobManager:
             p.start()
             with self.lock:
                 self.procs[job_id] = p
-            p.join()
+            p.join(self.max_seconds)
+            if p.is_alive():                                     # 시간 상한: 멈추고 실패로 기록
+                p.terminate()
+                p.join(10)
+                write_status(d, state="failed", message=f"시간 상한 {self.max_seconds:.0f}초를 넘어 중단했다")
             with self.lock:
                 self.procs.pop(job_id, None)
             s = self.status(job_id)

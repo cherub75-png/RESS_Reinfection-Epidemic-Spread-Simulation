@@ -25,9 +25,30 @@ EXPORTS = {"daily.csv": "text/csv", "regions.csv": "text/csv", "summary.json": "
            "config.json": "application/json", "result.json": "application/json"}
 
 
-def create_app(job_root: Path | None = None, max_concurrent: int = 1) -> FastAPI:
+CLIENT_HEADER = "x-seir-client"
+LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]", "testserver"]
+
+
+def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_hosts: list[str] | None = None,
+               max_job_seconds: float = 6 * 3600) -> FastAPI:
+    """보안 (로컬 전용)
+    - Host 헤더가 허용 목록(기본: 127.0.0.1, localhost)에 없으면 거부한다 (DNS 리바인딩 방지).
+    - 상태를 바꾸는 요청(POST, DELETE)은 사용자 지정 헤더 X-SEIR-Client 가 있어야 한다. 다른 사이트의 페이지가 브라우저로
+      보내는 요청은 이 헤더를 붙이려면 CORS 사전 요청을 거쳐야 하고, 이 서버는 CORS 를 허용하지 않으므로 막힌다 (CSRF 방지).
+    """
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse as _JR
     app = FastAPI(title="재감염 SEIR 시뮬레이터 (로컬)", docs_url="/api/docs", redoc_url=None)
-    jobs = JobManager(job_root or ROOT / "outputs" / "web_jobs", max_concurrent=max_concurrent)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts or LOCAL_HOSTS)
+
+    @app.middleware("http")
+    async def require_client_header(request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.headers.get(CLIENT_HEADER) != "web":
+            return _JR({"detail": "상태를 바꾸는 요청에는 X-SEIR-Client: web 헤더가 필요하다"}, status_code=403)
+        return await call_next(request)
+
+    jobs = JobManager(job_root or ROOT / "outputs" / "web_jobs", max_concurrent=max_concurrent, max_seconds=max_job_seconds)
     app.state.jobs = jobs
 
     def _job_dir(job_id):

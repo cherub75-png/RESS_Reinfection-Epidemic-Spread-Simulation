@@ -1,0 +1,218 @@
+# 3단계 추정 결과로 만든 대한민국 재현 설정 (scripts/report_stage7_integration.py 가 생성)
+# u(t)·I0 는 추정값, 감염병 매개변수(sigma, gamma, P, T, f, lambda)는 1단계 가정값이다.
+# 관측 매개변수(보고율·지연·치명률 배율)는 meta.observation 에 기록만 하며 엔진 상태에는 들어가지 않는다.
+run_mode: development
+meta:
+  name: KOR
+  note: 3단계 추정값으로 만든 재현 설정 (u(t) 는 추정값, 방정식 매개변수는 가정값)
+  calibration:
+    source: docs/reports/3_calibration.json
+    country: KOR
+    fit_period:
+    - '2020-02-01'
+    - '2021-10-31'
+    objective: 4967.417965981256
+    data: JHU CSSE daily cases/deaths
+  observation:
+    rho: 0.5
+    delay_c: 2.6063718974393457
+    r_c: 20.098110747450857
+    w_c:
+    - 0.8512748700207641
+    - 1.0785487637467837
+    - 1.0806932135525424
+    - 1.0764215437179976
+    - 1.0594509243541488
+    - 1.0246221171774046
+    - 0.8625038170215449
+    k_f:
+    - 1.4190840737390267
+    - 0.8900693946300265
+    - 0.7668722592835293
+    - 1.0039978750510918
+    - 0.4920945367635939
+    - 0.23190942820094318
+    - 0.23049757510918184
+    - 0.3198017470719135
+    kf_knot_days: 91
+    delay_d: 14.021226827099794
+    r_d: 11.29551985291685
+  R0_max: 6.0
+  fit_period:
+  - '2020-02-01'
+  - '2021-10-31'
+disease:
+  name: covid19_calibrated_u
+  sigma: 0.1923076923076923
+  gamma: 0.14285714285714285
+  transmission:
+    R0: 6.0
+    r0_reference: reference
+  P1: 1
+  T1: 1
+  Pmin: 0.3
+  alpha: 0.5
+  beta: 0.3
+  lam: 0.005555555555555556
+  f1: 0.01
+  phi:
+    form: power
+    delta: 0.5
+  M: 8
+regions:
+  source: single
+  name: KOR
+  population: 51815808.0
+  population_source: OWID population (2022 마지막 값)
+interventions:
+- start: 0
+  end: 14
+  value: 0.09547713296917149
+- start: 14
+  end: 28
+  value: 0.13066976708704026
+- start: 28
+  end: 42
+  value: 0.9492342476533867
+- start: 42
+  end: 56
+  value: 0.8838138693875288
+- start: 56
+  end: 70
+  value: 0.9494012807907918
+- start: 70
+  end: 84
+  value: 0.9587905422192564
+- start: 84
+  end: 98
+  value: 0.8129091644166875
+- start: 98
+  end: 112
+  value: 0.75729195574347
+- start: 112
+  end: 126
+  value: 0.7565158231277505
+- start: 126
+  end: 140
+  value: 0.8339834288292849
+- start: 140
+  end: 154
+  value: 0.8120302838425197
+- start: 154
+  end: 168
+  value: 0.8413680786972737
+- start: 168
+  end: 182
+  value: 0.8893279126569206
+- start: 182
+  end: 196
+  value: 0.5308860692196943
+- start: 196
+  end: 210
+  value: 0.7382935346875807
+- start: 210
+  end: 224
+  value: 0.9208068872204033
+- start: 224
+  end: 238
+  value: 0.9016565979986344
+- start: 238
+  end: 252
+  value: 0.8468517916397862
+- start: 252
+  end: 266
+  value: 0.8058467690218596
+- start: 266
+  end: 280
+  value: 0.7990781391738693
+- start: 280
+  end: 294
+  value: 0.6624268767465633
+- start: 294
+  end: 308
+  value: 0.714985700433501
+- start: 308
+  end: 322
+  value: 0.7479351559320904
+- start: 322
+  end: 336
+  value: 0.8615378436393227
+- start: 336
+  end: 350
+  value: 0.903779029130907
+- start: 350
+  end: 364
+  value: 0.8608060700369874
+- start: 364
+  end: 378
+  value: 0.8275626601406638
+- start: 378
+  end: 392
+  value: 0.8461424781012675
+- start: 392
+  end: 406
+  value: 0.8272884631910737
+- start: 406
+  end: 420
+  value: 0.8272648763768251
+- start: 420
+  end: 434
+  value: 0.7865106670785293
+- start: 434
+  end: 448
+  value: 0.8137500628529115
+- start: 448
+  end: 462
+  value: 0.8454525302875859
+- start: 462
+  end: 476
+  value: 0.8392161677521092
+- start: 476
+  end: 490
+  value: 0.8431312866353671
+- start: 490
+  end: 504
+  value: 0.8579544339592348
+- start: 504
+  end: 518
+  value: 0.7498136830404734
+- start: 518
+  end: 532
+  value: 0.7406676457455434
+- start: 532
+  end: 546
+  value: 0.8191755823674083
+- start: 546
+  end: 560
+  value: 0.8098724815235805
+- start: 560
+  end: 574
+  value: 0.8431493064492575
+- start: 574
+  end: 588
+  value: 0.8280894654934396
+- start: 588
+  end: 602
+  value: 0.7752881938942504
+- start: 602
+  end: 616
+  value: 0.8689143447577272
+- start: 616
+  end: 630
+  value: 0.8657407123416245
+- start: 630
+  end: 639
+  value: 0.7541662467628885
+initial:
+  start_date: '2020-02-01'
+  seeds:
+  - region: KOR
+    count: 11.404772679776267
+    compartment: I1
+  - region: KOR
+    count: 8.472116847833798
+    compartment: E1
+simulation:
+  days: 639
+  method: ode
+  n_runs: 1

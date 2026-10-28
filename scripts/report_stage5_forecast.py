@@ -268,7 +268,7 @@ def report(df, raw, infos, missing, a, wall):
     # SEIR 표본 CRPS
     s = df[(df["method"] == "seir") & df["crps"].notna()] if "crps" in df else pd.DataFrame()
     if len(s):
-        rep["seir_crps_by_var_h"] = s.groupby(["var", "h"])["crps"].mean().to_dict()
+        rep["seir_crps_by_var_h"] = {f"{v}|{h}": float(x) for (v, h), x in s.groupby(["var", "h"])["crps"].mean().items()}
     # 52주 계절 단순 예측 (부분 집합)
     S52 = common(df, ["persistence", "seasonal52", "seir", "ml"])
     if len(S52):
@@ -325,6 +325,16 @@ def report(df, raw, infos, missing, a, wall):
         first = h[h["hybrid_active"]]["origin"].min()
         L += [f"하이브리드 보정이 실제로 적용된 행 비율 {h['hybrid_active'].mean():.2f} (첫 적용 기점 {first.date() if pd.notna(first) else '-'}; "
               "그 전에는 학습 행이 부족해 SEIR 분위수를 그대로 씀).", ""]
+    kc = knot_comparison(df, a.knot)
+    if kc:
+        rep["knot_comparison"] = kc
+        L += ["## 부가: SEIR u(t) 구간 7일 대 14일 (같은 국가·기점·예측 주)", "",
+              f"국가 {', '.join(kc['countries'])}, 기점 {kc['n_origins']}개 (7일 실행은 계산량 때문에 4주마다).", "",
+              "| 변수 | 예측 주 | n | 로그 WIS 14일 | 로그 WIS 7일 | 비 (7/14) | 90% 포함 14일 | 90% 포함 7일 |", "|---|---|---|---|---|---|---|---|"]
+        for r in kc["rows"]:
+            L.append(f"| {r['var']} | {r['h']} | {r['n']} | {r['wis_log_k14']:.3f} | {r['wis_log_k7']:.3f} | {r['ratio']:.3f} | "
+                     f"{r['cov90_k14']:.2f} | {r['cov90_k7']:.2f} |")
+        L.append("")
     rep["train_rows"] = infos
     (ROOT / "docs" / "reports" / f"5_forecast_validation{'' if a.knot == 14 else f'_k{a.knot}'}.json").write_text(
         json.dumps(rep, indent=1, ensure_ascii=False, default=str))
@@ -333,6 +343,41 @@ def report(df, raw, infos, missing, a, wall):
           "`docs/figures/5_by_period.png`"]
     (ROOT / "docs" / "reports" / f"5_forecast_validation{'' if a.knot == 14 else f'_k{a.knot}'}.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
+
+
+def knot_comparison(df, knot):
+    """seir_k7_*.pkl 이 있으면 같은 (국가, 기점, 변수, 예측 주) 에서 14일 구간 SEIR 과 비교한다."""
+    from seir_sim.forecast import metrics as Mx
+    if knot != 14:
+        return None
+    other = load_seir(7, G["countries"])
+    if not other:
+        return None
+    rows = []
+    for (c, o), r in other.items():
+        for var in VARS:
+            if f"{var}_q" not in r:
+                continue
+            y = np.array([G["weekly"][var][c].get(o + pd.Timedelta(days=7 * h), np.nan) for h in (1, 2, 3, 4)], float)
+            q = np.asarray(r[f"{var}_q"])
+            for h in range(4):
+                rows.append({"iso3": c, "origin": o, "var": var, "h": h + 1, "truth": y[h], **{f"k7_q{k}": q[h, k] for k in range(q.shape[1])}})
+    k7 = pd.DataFrame(rows)
+    base = df[df["method"] == "seir"][["iso3", "origin", "var", "h", "truth"] + [f"q{k}" for k in range(Mx.QUANTILES.size)]]
+    m = base.merge(k7.drop(columns="truth"), on=["iso3", "origin", "var", "h"])
+    m = m[np.isfinite(m["truth"])]
+    if m.empty:
+        return None
+    y = m["truth"].to_numpy()
+    q14 = m[[f"q{k}" for k in range(Mx.QUANTILES.size)]].to_numpy()
+    q7 = m[[f"k7_q{k}" for k in range(Mx.QUANTILES.size)]].to_numpy()
+    m["w14"], m["w7"] = Mx.wis(y, q14, log=True)["wis"], Mx.wis(y, q7, log=True)["wis"]
+    m["c14"], m["c7"] = Mx.coverage(y, q14, 0.1), Mx.coverage(y, q7, 0.1)
+    out = []
+    for (var, h), g in m.groupby(["var", "h"]):
+        out.append({"var": var, "h": int(h), "n": int(len(g)), "wis_log_k14": float(g["w14"].mean()), "wis_log_k7": float(g["w7"].mean()),
+                    "ratio": float(g["w7"].mean() / g["w14"].mean()), "cov90_k14": float(g["c14"].mean()), "cov90_k7": float(g["c7"].mean())})
+    return {"countries": sorted(m["iso3"].unique()), "n_origins": int(m["origin"].nunique()), "rows": out}
 
 
 def figures(df, C, knot):

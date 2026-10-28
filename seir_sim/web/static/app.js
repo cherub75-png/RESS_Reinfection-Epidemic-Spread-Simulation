@@ -3,6 +3,7 @@
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -44,7 +45,7 @@ function koMsg(x) {
 }
 
 async function api(path, opts = {}) {
-  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const r = await fetch(path, { headers: { "Content-Type": "application/json", "X-SEIR-Client": "web" }, ...opts });
   let body = null;
   try { body = await r.json(); } catch (_) { /* 본문 없음 */ }
   if (!r.ok) {
@@ -399,7 +400,7 @@ function drawMap(geo, s, names) {
   const style = (f) => ({ color: css("--surface"), weight: 1, fillOpacity: 0.9, fillColor: colorFor(idx[f.id] !== undefined ? fr.prevalence_per_100k[cur][idx[f.id]] : null, bins) });
   geoLayer = L.geoJSON(geo, { style, onEachFeature: (f, layer) => layer.bindTooltip(() => {
     const k = idx[f.id]; const v = k === undefined ? null : fr.prevalence_per_100k[cur][k];
-    return `${f.properties.name} (${f.id})<br>10만 명당 유병: ${fmt(v)}<br>인구: ${fmt(f.properties.population)}`; }, { sticky: true }) }).addTo(map);
+    return `${esc(f.properties.name)} (${esc(f.id)})<br>10만 명당 유병: ${esc(fmt(v))}<br>인구: ${esc(fmt(f.properties.population))}`; }, { sticky: true }) }).addTo(map);
   const fit = () => { if (box.clientWidth > 0 && box.clientHeight > 0) { map.invalidateSize(); try { map.fitBounds(geoLayer.getBounds(), { padding: [8, 8] }); } catch (_) { /* 빈 경계 */ } } };
   fit();
   rerenderMapFit = fit;
