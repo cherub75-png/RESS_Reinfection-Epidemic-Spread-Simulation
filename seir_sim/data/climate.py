@@ -78,3 +78,34 @@ def daily_series(monthly_T: np.ndarray, monthly_RH: np.ndarray, start_date: dt.d
     m = np.array([d.month - 1 for d in dates])
     return EnvironmentSeries(np.asarray(monthly_T)[m], np.asarray(monthly_RH)[m], synthetic=False,
                              provenance={"monthly_climatology": True, **(provenance or {})})
+
+
+def attach_monthly_table(ds, path: str | Path):
+    """지역별 월 기후표 (CSV: id, month(1~12), tavg, rh[, source, period, note]) 를 데이터셋에 붙인다 (로컬 파일 입력 경로).
+
+    표에 없는 (지역, 월) 은 NaN (미확보) 이다. 보간하지 않는다. 출처와 기간 열은 provenance 에 남긴다.
+    """
+    import csv
+    from dataclasses import replace
+    idx = {r: i for i, r in enumerate(ds.ids)}
+    T = np.full((12, ds.K), np.nan)
+    RH = np.full((12, ds.K), np.nan)
+    sources, periods = set(), set()
+    with open(path, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            i = idx.get(row["id"])
+            if i is None:
+                continue
+            m = int(row["month"]) - 1
+            if not 0 <= m < 12:
+                raise ValueError(f"month 는 1~12: {row}")
+            T[m, i] = float(row["tavg"]) if row["tavg"] not in ("", "nan") else np.nan
+            RH[m, i] = float(row["rh"]) if row["rh"] not in ("", "nan") else np.nan
+            sources.add(row.get("source", ""))
+            periods.add(row.get("period", ""))
+    if np.any((RH < 0) | (RH > 100)):
+        raise ValueError("상대습도는 0~100 이어야 한다")
+    prov = {**ds.provenance, "climate": {"table": Path(path).name, "sources": sorted(sources), "periods": sorted(periods),
+                                         "missing_cells": int(np.isnan(T).sum() + np.isnan(RH).sum()),
+                                         "note": "월별 평균표. 기후평년값이 아닐 수 있음 (periods 참고)"}}
+    return replace(ds, tavg=T, rh=RH, provenance=prov)

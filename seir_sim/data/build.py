@@ -86,12 +86,18 @@ def build_world_countries(admin0_path, wb_population_csv, year: int, airports_pa
 
 def build_admin1(admin1_path, country_a3: str, airports_path, routes_path, air_trips_per_day: float,
                  commute_fraction: float, destination_contact_share: float,
-                 population_raster: str | Path | None = None) -> RegionDataset:
-    """한 나라의 1급 행정구역. 인구는 격자 파일에서만 만든다. 없으면 NaN (미확보) 으로 둔다."""
+                 population_raster: str | Path | None = None,
+                 population_table: str | Path | None = None) -> RegionDataset:
+    """한 나라의 1급 행정구역. 인구는 격자 파일 또는 인구표(CSV)에서 만든다. 둘 다 없으면 NaN (미확보) 으로 둔다."""
     geo = load_admin1(admin1_path, country_a3)
+    if population_raster is not None and population_table is not None:
+        raise ValueError("인구 격자와 인구표 중 하나만 준다")
     if population_raster is not None and Path(population_raster).exists():
         pop, meta = popmod.from_raster(population_raster, geo)
         meta["inputs"] = [_input_record(population_raster)]
+    elif population_table is not None:
+        pop, meta = popmod.from_table(population_table, geo)
+        meta["inputs"] = [_input_record(population_table)]
     else:
         pop = np.full(geo.K, np.nan)
         meta = {"source": "미확보", "reason": f"인구 격자 파일 없음: {population_raster}"}

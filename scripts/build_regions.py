@@ -4,7 +4,8 @@
       --commute-fraction 0.002 --contact-share 0.3 --out data_processed/world_countries_2019.nc
   python -I scripts/build_regions.py admin1 --country KOR --air-trips-per-day 9e4 \\
       --commute-fraction 0.05 --contact-share 0.3 --out data_processed/KOR_admin1.nc \\
-      [--population-raster data_raw/worldpop_kor_2020_1km/kor_ppp_2020_1km_Aggregated_UNadj.tif]
+      [--population-raster data_raw/worldpop_kor_2020_1km/kor_ppp_2020_1km_Aggregated_UNadj.tif |
+       --population-table data_processed/tables/KOR_admin1_population_gc19od.csv]
 
 가정 매개변수(--air-trips-per-day, --commute-fraction, --contact-share)는 기본값이 없다. 반드시 명시한다.
 """
@@ -34,6 +35,8 @@ def main():
     sub.choices["world"].add_argument("--year", type=int, required=True)
     sub.choices["admin1"].add_argument("--country", required=True, help="ISO3, 예: KOR")
     sub.choices["admin1"].add_argument("--population-raster", default=None)
+    sub.choices["admin1"].add_argument("--population-table", default=None, help="CSV: id, population[, source, tier, reference_date]")
+    sub.choices["admin1"].add_argument("--climate-table", default=None, help="CSV: id, month, tavg, rh (월별)")
     a = ap.parse_args()
     air = (RAW / "openflights" / "airports.dat", RAW / "openflights" / "routes.dat")
     if a.scope == "world":
@@ -42,7 +45,11 @@ def main():
                                    a.air_trips_per_day, a.commute_fraction, a.contact_share)
     else:
         ds = build_admin1(RAW / "ne_admin1_10m" / "ne_10m_admin_1_states_provinces.geojson", a.country, *air,
-                          a.air_trips_per_day, a.commute_fraction, a.contact_share, a.population_raster)
+                          a.air_trips_per_day, a.commute_fraction, a.contact_share, a.population_raster,
+                          a.population_table)
+        if a.climate_table:
+            from seir_sim.data.climate import attach_monthly_table
+            ds = attach_monthly_table(ds, a.climate_table)
     ds.save(a.out)
     q = ds.quality()
     print(json.dumps({"out": a.out, "K": ds.K, "quality": {k: v for k, v in q.items() if k != "missing_population"},

@@ -11,7 +11,7 @@ disease:
   gamma: 1/7            # 1/일, 평균 감염기간 7일
   transmission:
     R0: 2.5
-    r0_reference: network     # network (기본) | reference
+    r0_reference: reference   # reference (기본) | region (+ reference_region) | origin | population_mean | network
   P1: 1.0
   T1: 1.0
   Pmin: 0.3

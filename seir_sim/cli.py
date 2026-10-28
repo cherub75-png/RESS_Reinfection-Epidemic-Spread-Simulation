@@ -3,6 +3,9 @@
   python -m seir_sim info configs/world_countries_2019.yaml
   python -m seir_sim run  configs/world_countries_2019.yaml --out outputs/world --runs 100 --workers 4
   python -m seir_sim run  configs/example_single_region.yaml --out outputs/single --method ode
+  python -m seir_sim data register --name KOR_admin1 data_processed/KOR_admin1_gc19od.nc --note "..."
+  python -m seir_sim data activate --name KOR_admin1 v1      (rollback / list / validate / diff)
+  python -m seir_sim forecast --country KOR --out outputs/forecast_KOR.json
 
 결과: <out>/ensemble.nc (NetCDF), summary_daily.parquet, summary_regions.parquet, run_record.json, 그림 PNG.
 """
@@ -64,6 +67,40 @@ def _run(args):
                       "synthetic_regions": bool(res.derived.get("regions_synthetic"))}, ensure_ascii=False, indent=1))
 
 
+def _forecast(args):
+    from .forecast.operational import latest_forecast
+    out = latest_forecast(args.country, args.origin, knot=args.knot, n_samples=args.samples)
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    print(json.dumps({k: v for k, v in out.items() if k != "methods"} | {
+        "median_weekly_cases": {m: [round(r[4]) for r in v["cases"]] for m, v in out["methods"].items()
+                                if not m.startswith("_") and v.get("cases") is not None}}, ensure_ascii=False, indent=1))
+
+
+def _data(args):
+    from .data.dataset import RegionDataset
+    from .data.versions import Registry, validate_dataset
+    reg = Registry()
+    if args.action == "list":
+        out = {n: {"active": e["active"], "history": e["history"],
+                   "versions": [{k: v[k] for k in ("version", "registered_utc", "K", "population_total", "population_source",
+                                                   "synthetic", "note")} | {"ok": v["validation"]["ok"]} for v in e["versions"]]}
+               for n, e in reg.list().items()}
+    elif args.action == "validate":
+        out = validate_dataset(RegionDataset.load(args.target))
+    elif args.action == "register":
+        out = {"version": reg.register(args.name, args.target, args.note or "")}
+    elif args.action == "activate":
+        reg.activate(args.name, args.target, force=args.force)
+        out = {"active": args.target}
+    elif args.action == "rollback":
+        out = {"active": reg.rollback(args.name)}
+    else:
+        out = reg.diff(args.name, None, RegionDataset.load(args.target))
+    print(json.dumps(out, ensure_ascii=False, indent=1, default=str))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="seir_sim", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -79,8 +116,20 @@ def main(argv=None):
     b.add_argument("--outbreak-threshold", type=float, default=1000.0, help="대유행 판정: max I_total >= 이 값")
     b.add_argument("--outlines", default=None, help="지도 배경 경계 GeoJSON (선택)")
     b.add_argument("--no-plots", action="store_true")
+    c = sub.add_parser("data", help="지역 데이터셋 버전 관리 (list / validate / register / activate / rollback / diff)")
+    c.add_argument("action", choices=["list", "validate", "register", "activate", "rollback", "diff"])
+    c.add_argument("--name", help="데이터셋 이름 (예: KOR_admin1)")
+    c.add_argument("target", nargs="?", help="validate/register/diff: .nc 파일, activate: 버전 (예: v2)")
+    c.add_argument("--note", default=None)
+    c.add_argument("--force", action="store_true", help="검증 실패 버전도 활성화 (권장하지 않음)")
+    f = sub.add_parser("forecast", help="최신 자료 기점의 4주 예측 (5단계와 같은 방법; 기점 뒤 자료 사용 안 함)")
+    f.add_argument("--country", required=True, help="ISO3 (예: KOR)")
+    f.add_argument("--origin", default=None, help="기점 날짜 (기본: 자료 마지막 날 이전 일요일)")
+    f.add_argument("--knot", type=int, default=14)
+    f.add_argument("--samples", type=int, default=300)
+    f.add_argument("--out", default=None, help="JSON 저장 경로")
     args = ap.parse_args(argv)
-    {"info": _info, "run": _run}[args.cmd](args)
+    {"info": _info, "run": _run, "data": _data, "forecast": _forecast}[args.cmd](args)
 
 
 if __name__ == "__main__":

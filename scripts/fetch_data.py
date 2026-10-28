@@ -117,6 +117,9 @@ def write_markdown(manifest):
             else:
                 lines.append(f"- {f['url']} → 실패: {f.get('error', '')}")
         lines.append("")
+    derived = ROOT / "docs" / "data_sources_derived.md"       # 손으로 관리하는 파생 자료·가정 절 (덮어쓰지 않음)
+    if derived.exists():
+        lines += ["", derived.read_text().rstrip()]
     (ROOT / "docs" / "DATA_SOURCES.md").write_text("\n".join(lines) + "\n")
 
 

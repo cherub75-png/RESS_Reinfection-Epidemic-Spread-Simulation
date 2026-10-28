@@ -136,6 +136,31 @@ def c0_network(R0: float, system: ReactionSystem, X: np.ndarray | None = None, t
     return R0 / R_unit
 
 
+def isolated_r0(system: ReactionSystem, t: float = 0.0) -> np.ndarray:
+    """지역별 고립 R0: 지역 i 가 자기 주민끼리만 접촉하고 이동이 없을 때 g_i(t) c_i(t) P1 T1 / gamma (c0 에 비례)."""
+    p = system.params
+    return system.drivers.g(t) * system.contact_rate(t) * p.P1 * p.T1 / p.gamma
+
+
+def c0_region(R0: float, system: ReactionSystem, region: int, t: float = 0.0) -> float:
+    """사용자가 고른 기준 지역 region 의 고립 R0 가 목표가 되도록 c0 를 정한다 (D-008).
+    모든 지역에 같은 c0 를 쓰므로 지역 간 상대 전파력(h(rho_i), g_i, u_i)은 그대로다."""
+    unit = isolated_r0(system.with_params(c0=1.0), t)[region]
+    if unit <= 0:
+        raise ValueError(f"기준 지역 {system.regions.names[region]!r} 의 고립 R0 가 0 이다 (u = 1 또는 g = 0?)")
+    return R0 / unit
+
+
+def c0_population_mean(R0: float, system: ReactionSystem, t: float = 0.0) -> float:
+    """인구가중 평균 고립 R0 가 목표가 되도록 c0 를 정한다 (D-008 비교용)."""
+    unit = isolated_r0(system.with_params(c0=1.0), t)
+    pop = system.regions.population
+    m = float(np.sum(unit * pop) / pop.sum())
+    if m <= 0:
+        raise ValueError("인구가중 평균 고립 R0 가 0 이다")
+    return R0 / m
+
+
 def kappa(params, h: float = 1.0, g: float = 1.0, u: float = 0.0) -> float:
     """kappa = c P_1 T_1,  c = c0 h (1 - u),  g 를 곱한 실효값."""
     return g * params.c0 * h * (1.0 - u) * params.P1 * params.T1
@@ -157,7 +182,7 @@ def r0_report(system: ReactionSystem, t: float = 0.0) -> dict:
       g_i(t) c_i(t) P1 T1 / gamma. 최초 발생 지역(예: 해외 유입 원점)의 국지 전파력 비교용
     """
     p, reg = system.params, system.regions
-    local = system.drivers.g(t) * system.contact_rate(t) * p.P1 * p.T1 / p.gamma
+    local = isolated_r0(system, t)
     X_st = disease_free_state(system)
     X_st[:, system.layout.S] = reg.stationary_population()
     dfe = disease_free_state(system)
@@ -181,4 +206,7 @@ def r0_report(system: ReactionSystem, t: float = 0.0) -> dict:
         "R0_network_dominant_population_share": dom_share,
         "R0_network_dominated_by_small_population": dom_share < 0.05,
         "R0_isolated_population_weighted_mean": float(np.sum(local * pop) / pop.sum()) if pop.sum() > 0 else 0.0,
+        # R0 > 1 인구 비율: 고립 R0 > 1 인 지역의 인구 합 / 전체 인구 (지역 내 전파만으로 대유행이 가능한 인구의 비율).
+        # 지역 간 이동으로 R0 < 1 지역에도 감염이 들어올 수 있으므로 "감염될 수 있는 인구" 를 뜻하지는 않는다.
+        "population_share_isolated_R0_gt1": float(pop[local > 1].sum() / pop.sum()) if pop.sum() > 0 else 0.0,
     }

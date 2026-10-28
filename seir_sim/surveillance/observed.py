@@ -111,3 +111,34 @@ def build_observed(s: pd.Series, variable: str, location: str, source: str, star
         flags["aggregation"] = "daily, gap days merged with next positive day"
     return ObservedSeries(variable, location, source, dates, np.array(starts, dtype=np.int64),
                           np.array(ends, dtype=np.int64), np.array(ys), flags)
+
+
+def build_weekly(s: pd.Series, variable: str, location: str, source: str, start=None, end=None,
+                 week_end: str = "SUN") -> ObservedSeries:
+    """일별 발생 수를 week_end 요일로 끝나는 7일 합 구간으로 바꾼다 (시간순 예측용).
+
+    - 7일이 모두 있는 주만 쓴다 (NaN 이 하나라도 있으면 그 주는 뺀다).
+    - 소급 정정(음수)은 그 주의 합에 그대로 포함한다. 주 합이 음수면 그 주를 뺀다.
+    - 주 합은 보고 요일 구성(매일·주 몇 회·주 1회)에 영향을 덜 받으므로 국가 간 보고 방식 차이에 강하다.
+    """
+    s = s.astype(float)
+    if start or end:
+        s = s.loc[start:end]
+    s = s.asfreq("D")
+    dates = s.index
+    v = s.to_numpy()
+    dow = {"MON": 0, "TUE": 1, "WED": 2, "THU": 3, "FRI": 4, "SAT": 5, "SUN": 6}[week_end]
+    ends = np.flatnonzero(np.asarray(dates.dayofweek) == dow)
+    ends = ends[ends >= 6]
+    starts = ends - 6
+    c = np.concatenate([[0.0], np.cumsum(np.nan_to_num(v))])
+    nan_c = np.concatenate([[0], np.cumsum(np.isnan(v))])
+    y = c[ends + 1] - c[starts]
+    complete = (nan_c[ends + 1] - nan_c[starts]) == 0
+    keep = complete & (y >= 0)
+    flags = {"n_days": int(v.size), "aggregation": f"weekly sums ending {week_end}", "rule_version": 1,
+             "weeks_incomplete_excluded": int((~complete).sum()),
+             "weeks_negative_excluded": [str(dates[e].date()) for e in ends[complete & (y < 0)]],
+             "negative_days_included": int(np.sum(v < 0))}
+    return ObservedSeries(variable, location, source, dates, starts[keep].astype(np.int64),
+                          ends[keep].astype(np.int64), y[keep], flags)

@@ -5,12 +5,12 @@
 | 단계 | 내용 | 상태 | 근거 |
 |---|---|---|---|
 | 1 | 시뮬레이션 엔진 (ODE, CTMC, tau-leap, SDE, 하이브리드, 데이터 계층, 앙상블) | 완료 | `docs/reports/STAGE1_REPORT.md` |
-| 2 | 실제 감염병 자료 수집·품질 검증 | 진행 | `docs/reports/2_data_quality.md`, `docs/DATA_SOURCES.md` |
-| 3 | 관측 모형과 매개변수 추정 | 예정 | |
-| 4 | 머신러닝·기준 모델 비교 | 예정 | |
-| 5 | COVID-19 시간순 예측 검증 | 예정 | |
-| 6 | 공간·자연환경 자료 완성, 업데이트 관리 | 예정 | |
-| 7 | 엔진·자료·추정 결과 통합 | 예정 | |
+| 2 | 실제 감염병 자료 수집·품질 검증 | 완료 | `docs/reports/2_data_quality.md`, `docs/DATA_SOURCES.md` |
+| 3 | 관측 모형과 매개변수 추정 | 완료 | `docs/reports/3_calibration.md`, `tests/test_inference.py` |
+| 4 | 머신러닝·기준 모델 비교 | 진행 (코드·테스트 완료, 실행 중) | `seir_sim/ml/`, `tests/test_forecast.py` |
+| 5 | COVID-19 시간순 예측 검증 | 진행 (규약 고정, 실행 중) | `docs/reports/5_protocol.md` |
+| 6 | 공간·자연환경 자료 완성, 업데이트 관리 | 진행 | `seir_sim/data/versions.py`, `tests/test_data_versions.py` |
+| 7 | 엔진·자료·추정 결과 통합 | 진행 | `seir_sim/inference/export.py`, `tests/test_integration.py` |
 | 8 | 웹 애플리케이션 | 예정 | |
 | 9 | 성능·안정성·보안 종합 검증 | 예정 | |
 | 10 | 문서·배포 묶음 | 예정 | |

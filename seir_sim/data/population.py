@@ -38,6 +38,33 @@ def from_attribute(regions: RegionGeometry, key: str, year_key: str | None = Non
                  "missing": [rid for rid, v in zip(regions.ids, pop) if np.isnan(v)]}
 
 
+def from_table(path: str | Path, regions: RegionGeometry) -> tuple[np.ndarray, dict]:
+    """사용자·외부가 준 지역별 인구표 (CSV). 로컬 파일 입력 경로.
+
+    필수 열: id (지역 id 와 같은 값, 예: ISO 3166-2 'KR-11'), population.
+    선택 열: source, tier (primary/compiled/secondary), reference_date, note.
+    표에 없는 지역은 NaN (미확보) 이다. 값을 보간하거나 다른 지역에서 추정하지 않는다.
+    """
+    table: dict[str, dict] = {}
+    with open(path, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if "id" not in row or "population" not in row:
+                raise ValueError("인구표에는 id, population 열이 필요하다")
+            v = float(row["population"]) if row["population"] not in ("", "NA", "nan") else np.nan
+            if np.isfinite(v) and v < 0:
+                raise ValueError(f"음수 인구: {row['id']}")
+            if row["id"] in table:
+                raise ValueError(f"중복 id: {row['id']}")
+            table[row["id"]] = {**row, "population": v}
+    pop = np.array([table[r]["population"] if r in table else np.nan for r in regions.ids])
+    src = sorted({table[r].get("source", "") for r in regions.ids if r in table})
+    tiers = sorted({table[r].get("tier", "") for r in regions.ids if r in table})
+    return pop, {"source": f"table {Path(path).name}", "table_sources": src, "tiers": tiers,
+                 "reference_dates": sorted({table[r].get("reference_date", "") for r in regions.ids if r in table}),
+                 "missing": [r for r, v in zip(regions.ids, pop) if np.isnan(v)],
+                 "unused_ids": sorted(set(table) - set(regions.ids))}
+
+
 def combine(primary: tuple[np.ndarray, dict], fallback: tuple[np.ndarray, dict]) -> tuple[np.ndarray, np.ndarray, dict]:
     """primary 가 NaN 인 곳만 fallback 으로 채운다. 지역별 출처 색인(0 = primary, 1 = fallback, -1 = 없음)을 반환한다."""
     p, pm = primary

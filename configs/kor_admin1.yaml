@@ -8,7 +8,7 @@ meta: {name: kor_admin1}
 disease:
   sigma: 1/5.2
   gamma: 1/7
-  transmission: {R0: 2.5, r0_reference: network}
+  transmission: {R0: 2.5, r0_reference: reference}   # 기준 지역을 고르려면 r0_reference: region, reference_region: KR_11 등
   P1: 1.0
   T1: 1.0
   Pmin: 0.3

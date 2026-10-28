@@ -35,19 +35,28 @@ class Strict(BaseModel):
 class Transmission(Strict):
     """c0 를 직접 주거나 R0 를 준다 (둘 중 하나).
 
-    r0_reference (기본 network)
-      - network:   실제 지역망의 t0 시점 다음 세대 행렬 스펙트럼 반지름
-      - reference: 단일 지역 기준 조건(h=1, g=1, u=0, 이동 없음)의 R0 = c0 P1 T1 / gamma
-    어느 기준으로 c0 를 정하든 두 값과 지역별 고립 R0 를 모두 계산해 실행 기록(derived)에 남긴다.
+    r0_reference (기본 reference; 사용자 결정 D-008)
+      - reference:       단일 지역 기준 조건(rho = rho_ref, g = 1, u = 0, 이동 없음)의 R0 = c0 P1 T1 / gamma
+      - region:          사용자가 고른 기준 지역 reference_region 의 t0 고립 R0 (h(rho_i), g_i, u_i 반영)
+      - origin:          첫 초기 감염 지역의 t0 고립 R0 (비교용)
+      - population_mean: 인구가중 평균 고립 R0 (비교용)
+      - network:         실제 지역망의 t0 시점 다음 세대 행렬 스펙트럼 반지름 (작은 고밀도 지역이 지배할 수 있음, D-008)
+    어느 기준이든 c0 하나를 모든 지역에 쓴다 (지역별 전파력을 따로 맞추지 않는다).
+    모든 기준의 c0 와 R0 를 함께 계산해 실행 기록(derived)에 남긴다.
     """
     c0: Num | None = None
     R0: Num | None = None
-    r0_reference: Literal["reference", "network"] = "network"
+    r0_reference: Literal["reference", "region", "origin", "population_mean", "network"] = "reference"
+    reference_region: str | None = None
 
     @model_validator(mode="after")
     def _one(self):
         if (self.c0 is None) == (self.R0 is None):
             raise ValueError("transmission 에는 c0 와 R0 중 정확히 하나를 지정해야 한다")
+        if self.r0_reference == "region" and not self.reference_region:
+            raise ValueError("r0_reference = region 에는 reference_region (지역 이름) 이 필요하다")
+        if self.reference_region and self.r0_reference != "region":
+            raise ValueError("reference_region 은 r0_reference = region 일 때만 쓴다")
         return self
 
 
@@ -75,8 +84,12 @@ class Regions(Strict):
       - synthetic_single: 단일 합성 지역 (population, density)
       - synthetic_random: 무작위 합성 지역 K개 (seed)
       - dataset:          data 계층이 만든 지역 데이터셋 파일 (NetCDF, scripts/build_regions.py), path 필수
+                          path 가 "registry:<이름>[@v<k>]" 이면 데이터셋 버전 저장소에서 찾는다 (data.versions)
+      - single:           실제 단일 지역 (예: 국가 전체). name, population, population_source 필수 (합성 아님)
     """
-    source: Literal["synthetic_single", "synthetic_random", "dataset"]
+    source: Literal["synthetic_single", "synthetic_random", "dataset", "single"]
+    name: str | None = None
+    population_source: str | None = None
     population: Num | None = None
     density: Num = 1.0
     K: int | None = None

@@ -41,6 +41,12 @@ def build_regions(cfg: Config) -> RegionSet:
         if r.population is None:
             raise ValueError("synthetic_single 에는 population 이 필요하다")
         return RegionSet.single(r.population, r.density)
+    if r.source == "single":
+        if r.population is None or not r.name or not r.population_source:
+            raise ValueError("regions.source = single 에는 name, population, population_source 가 필요하다")
+        return RegionSet((r.name,), np.array([float(r.population)]), np.array([r.density]), np.ones((1, 1)),
+                         np.zeros((1, 1)), synthetic=False,
+                         provenance={"source": "single region", "population_source": r.population_source})
     if r.source == "synthetic_random":
         if r.K is None:
             raise ValueError("synthetic_random 에는 K 가 필요하다")
@@ -52,10 +58,29 @@ def build_regions(cfg: Config) -> RegionSet:
 
 
 def load_dataset(cfg: Config) -> RegionDataset:
+    if str(cfg.regions.path).startswith("registry:"):
+        from ..data.versions import Registry
+        return RegionDataset.load(Registry().resolve(str(cfg.regions.path)[len("registry:"):]))
     path = Path(cfg.regions.path)
     if not path.is_absolute() and cfg.meta.get("_config_dir"):
         path = Path(cfg.meta["_config_dir"]) / path
     return RegionDataset.load(path)
+
+
+def c0_all_bases(R0: float, base: EpiParams, system: ReactionSystem, regions: RegionSet, cfg: Config) -> dict:
+    """모든 기준으로 c0 를 계산한다 (비교 기록용). 계산할 수 없는 기준은 None."""
+    tr = cfg.disease.transmission
+    out = {"reference": analysis.c0_reference(R0, base)}
+    try:
+        out["network"] = analysis.c0_network(R0, system)
+    except ValueError:
+        out["network"] = None
+    out["population_mean"] = analysis.c0_population_mean(R0, system)
+    out["origin"] = (analysis.c0_region(R0, system, regions.index(cfg.initial.seeds[0].region))
+                     if cfg.initial.seeds else None)
+    out["region"] = (analysis.c0_region(R0, system, regions.index(tr.reference_region))
+                     if tr.reference_region in regions.names else None)
+    return out
 
 
 def build_scenario(cfg: Config) -> Scenario:
@@ -80,23 +105,31 @@ def build_scenario(cfg: Config) -> Scenario:
                      alpha=d.alpha, beta=d.beta, lam=d.lam, f1=d.f1, phi_spec=d.phi, M=d.M)
     system = ReactionSystem(base, regions, drivers, cfg.contact_model.h, cfg.contact_model.rho_ref)
 
-    tr = d.transmission
-    if tr.c0 is not None:
-        c0 = tr.c0
-    elif tr.r0_reference == "reference":
-        c0 = analysis.c0_reference(tr.R0, base)
-    else:
-        c0 = analysis.c0_network(tr.R0, system)
-    system = system.with_params(c0=c0)
-
     for s in cfg.initial.seeds:
         if s.region not in regions.names:
             raise ValueError(f"초기 감염 지역 {s.region!r} 이 지역 목록에 없다 (예: {list(regions.names)[:8]})")
+
+    tr = d.transmission
+    c0_by_basis = None
+    if tr.R0 is not None:
+        c0_by_basis = c0_all_bases(tr.R0, base, system, regions, cfg)
+    if tr.c0 is not None:
+        c0 = tr.c0
+    elif tr.r0_reference == "region":
+        if tr.reference_region not in regions.names:
+            raise ValueError(f"기준 지역 {tr.reference_region!r} 이 지역 목록에 없다")
+        c0 = c0_by_basis["region"]
+    else:
+        c0 = c0_by_basis[tr.r0_reference]
+        if c0 is None:
+            raise ValueError(f"r0_reference = {tr.r0_reference} 로 c0 를 정할 수 없다 (초기 감염 지역이 없음?)")
+    system = system.with_params(c0=c0)
     seeds = [(regions.index(s.region), s.count, s.compartment or cfg.initial.seed_compartment)
              for s in cfg.initial.seeds]
     X0 = initial_state(system.layout, regions.population, seeds)
 
     derived = {"c0": c0, "c0_basis": "given" if tr.c0 is not None else tr.r0_reference,
+               "reference_region": tr.reference_region, "c0_by_basis": c0_by_basis,
                **analysis.r0_report(system), "rho_ref": system.rho_ref,
                "regions_synthetic": regions.synthetic,
                "regions_provenance": regions.provenance,

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 import yaml
 from pydantic import ValidationError
@@ -90,16 +91,61 @@ def test_dataset_regions_missing_file_raises():
         build_scenario(Config.model_validate(raw))
 
 
-def test_default_r0_basis_is_network_and_report_has_all_bases():
+def test_default_r0_basis_is_reference_and_report_has_all_bases():
+    """D-008 사용자 결정: 기본 reference. 모든 기준의 c0 와 R0 를 함께 기록한다."""
     raw = _raw("example_single_region.yaml")
     raw["disease"]["transmission"] = {"R0": 2.5}
     cfg = Config.model_validate(raw)
-    assert cfg.disease.transmission.r0_reference == "network"
+    assert cfg.disease.transmission.r0_reference == "reference"
     d = build_scenario(cfg).derived
     for k in ("R0_reference", "R0_network_t0", "R0_network_stationary",
               "mobility_imbalance_per_day", "R0_isolated_by_region", "R0_network_dominant_regions",
-              "R0_network_dominant_population_share", "R0_isolated_population_weighted_mean"):
+              "R0_network_dominant_population_share", "R0_isolated_population_weighted_mean",
+              "population_share_isolated_R0_gt1", "c0_by_basis"):
         assert k in d
+    assert d["R0_reference"] == pytest.approx(2.5)
+    assert set(d["c0_by_basis"]) == {"reference", "network", "population_mean", "origin", "region"}
+
+
+def _three_region_raw():
+    return _raw("example_synthetic_network.yaml")        # 합성 17개 지역, h(rho) = (rho / rho_ref)^0.2
+
+
+@pytest.mark.parametrize("basis", ["region", "origin", "population_mean", "reference", "network"])
+def test_r0_bases_hit_their_targets_with_one_global_c0(basis):
+    """각 기준으로 c0 를 정하면 그 기준의 R0 가 목표와 같다. c0 는 모든 지역에 하나다 (지역별 상대 전파력 유지)."""
+    raw = _three_region_raw()
+    sc0 = build_scenario(Config.model_validate(raw))
+    names = list(sc0.system.regions.names)
+    tr = {"R0": 2.0, "r0_reference": basis}
+    if basis == "region":
+        tr["reference_region"] = names[-1]
+    raw["disease"]["transmission"] = tr
+    sc = build_scenario(Config.model_validate(raw))
+    d = sc.derived
+    iso = d["R0_isolated_by_region"]
+    target = {"region": iso[names[-1]], "origin": iso[raw["initial"]["seeds"][0]["region"]],
+              "population_mean": d["R0_isolated_population_weighted_mean"], "reference": d["R0_reference"],
+              "network": d["R0_network_t0"]}[basis]
+    assert target == pytest.approx(2.0, rel=1e-9)
+    assert d["c0"] == pytest.approx(d["c0_by_basis"][basis], rel=1e-12)
+    # 지역 간 고립 R0 의 비는 기준과 무관하다 (인위적 왜곡 없음)
+    ref = sc0.derived["R0_isolated_by_region"]
+    ratios = [iso[n] / ref[n] for n in names]
+    assert np.allclose(ratios, ratios[0], rtol=1e-12)
+
+
+def test_reference_region_validation():
+    raw = _three_region_raw()
+    raw["disease"]["transmission"] = {"R0": 2.0, "r0_reference": "region"}
+    with pytest.raises(ValueError, match="reference_region"):
+        Config.model_validate(raw)
+    raw["disease"]["transmission"] = {"R0": 2.0, "r0_reference": "region", "reference_region": "nowhere"}
+    with pytest.raises(ValueError, match="기준 지역"):
+        build_scenario(Config.model_validate(raw))
+    raw["disease"]["transmission"] = {"R0": 2.0, "reference_region": "x"}
+    with pytest.raises(ValueError, match="reference_region"):
+        Config.model_validate(raw)
 
 
 def test_seed_compartment_switch():

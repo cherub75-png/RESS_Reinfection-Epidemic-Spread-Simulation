@@ -13,6 +13,9 @@ GRID = "#e6e5e1"
 BLUE = "#2a78d6"
 BAND = "#b7d3f6"
 RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#2a78d6", "#1c5cab", "#104281", "#0d366b"]
+# 범주 색 (고정 순서, dataviz 기본 팔레트 1~5번; validate_palette.js 로 밝은 배경 검사 통과,
+# 3~5번은 대비 3:1 미만이라 그림에 직접 이름표를 붙이고 보고서에 표를 함께 둔다)
+CATEGORICAL = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 
 
 def _style(ax):
