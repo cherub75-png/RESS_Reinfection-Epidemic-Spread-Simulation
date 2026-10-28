@@ -75,9 +75,20 @@ def validate_dataset(ds: RegionDataset) -> dict:
     return {"ok": not err, "errors": err, "warnings": warn}
 
 
+def _pop_source(prov: dict):
+    pm = prov.get("population") or {}
+    if pm.get("source"):
+        return pm["source"]
+    if isinstance(pm.get("primary"), dict):                  # 표 + 보조 출처를 합친 경우 (예: World Bank + NE POP_EST)
+        return f"{pm['primary'].get('source')} (+ 보조: {(pm.get('fallback') or {}).get('source')})"
+    return None
+
+
 class Registry:
-    def __init__(self, store: Path = STORE):
-        self.store = Path(store)
+    def __init__(self, store: Path | None = None):
+        """store 를 주지 않으면 환경 변수 SEIR_SIM_DATASET_STORE, 그것도 없으면 data_processed/datasets."""
+        import os
+        self.store = Path(store or os.environ.get("SEIR_SIM_DATASET_STORE") or STORE)
         self.path = self.store / "registry.json"
         self.data = json.loads(self.path.read_text()) if self.path.exists() else {}
 
@@ -107,7 +118,7 @@ class Registry:
             "sha256": _sha256(dst), "registered_from": str(src),
             "registered_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "note": note,
             "K": ds.K, "population_total": float(np.nansum(ds.population)), "synthetic": ds.synthetic,
-            "population_source": (prov.get("population") or {}).get("source"), "validation": v,
+            "population_source": _pop_source(prov), "validation": v,
             "diff_vs_active": self.diff(name, None, ds) if entry["active"] else None})
         self._save()
         return version

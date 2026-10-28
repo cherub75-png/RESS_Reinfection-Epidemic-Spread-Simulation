@@ -120,8 +120,7 @@ def test_config_reads_registry_path(tmp_path, monkeypatch):
     replace(_ds(), synthetic=False).save(p)
     reg.register("T", p)
     reg.activate("T", "v1")
-    monkeypatch.setattr(V, "STORE", store)
-    monkeypatch.setattr(V.Registry.__init__, "__defaults__", (store,))
+    monkeypatch.setenv("SEIR_SIM_DATASET_STORE", str(store))
     cfg = Config.model_validate({
         "run_mode": "development", "meta": {"name": "t"},
         "disease": {"sigma": 0.2, "gamma": 0.15, "transmission": {"R0": 2.0}, "P1": 1, "T1": 1, "Pmin": 0.3,

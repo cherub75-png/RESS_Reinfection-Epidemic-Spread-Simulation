@@ -26,13 +26,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=9.1"]
+test = ["pytest>=9.1", "httpx>=0.28"]
+web = ["fastapi>=0.124", "uvicorn>=0.38", "python-multipart>=0.0.20"]
 
 [project.scripts]
 seir-sim = "seir_sim.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["seir_sim*"]
+
+[tool.setuptools.package-data]
+"seir_sim.web" = ["static/*", "static/vendor/*/*", "static/vendor/*/images/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

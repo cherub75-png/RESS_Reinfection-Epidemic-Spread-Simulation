@@ -177,8 +177,14 @@ def _meta_summary(metas: list[dict]) -> dict:
     return out
 
 
+class EnsembleCancelled(Exception):
+    """cancel() 가 참을 돌려 실행을 멈췄다."""
+
+
 def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = None,
-                 n_workers: int | None = None, outbreak_threshold: float = 1000.0) -> EnsembleResult:
+                 n_workers: int | None = None, outbreak_threshold: float = 1000.0,
+                 progress=None, cancel=None) -> EnsembleResult:
+    """progress(done, total): 실행 하나가 끝날 때마다 부른다. cancel(): 참이면 남은 실행을 멈추고 EnsembleCancelled."""
     import warnings
     sim = cfg.simulation
     method = method or sim.method
@@ -195,16 +201,27 @@ def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = No
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for r, c in enumerate(children):
+                if cancel is not None and cancel():
+                    raise EnsembleCancelled(f"{r}/{R} 실행 후 취소")
                 out, meta = _simulate(sc, method, c)
                 runs[r], metas[r] = out, meta
+                if progress is not None:
+                    progress(r + 1, R)
     else:
         import multiprocessing as mp
         # fork 는 다중 스레드 부모에서 교착 위험이 있어 forkserver 를 쓴다 (작업자는 설정 JSON 에서 시나리오를 새로 만든다)
         ctx = mp.get_context("forkserver" if "forkserver" in mp.get_all_start_methods() else "spawn")
         with ProcessPoolExecutor(max_workers=workers, mp_context=ctx, initializer=_init_worker,
                                  initargs=(cfg.model_dump_json(),)) as ex:
+            done = 0
             for r, out, meta in ex.map(_work, [(r, method, c) for r, c in enumerate(children)], chunksize=1):
                 runs[r], metas[r] = out, meta
+                done += 1
+                if progress is not None:
+                    progress(done, R)
+                if cancel is not None and cancel():
+                    ex.shutdown(wait=False, cancel_futures=True)
+                    raise EnsembleCancelled(f"{done}/{R} 실행 후 취소")
     wall = time.perf_counter() - t0
     t = sim.output_dt * np.arange(T)
     return EnsembleResult(t, list(sc.system.regions.names), runs, method, seeds, metas, cfg, sc.derived, wall,

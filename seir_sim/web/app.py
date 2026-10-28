@@ -1,0 +1,238 @@
+"""로컬 웹 애플리케이션 (FastAPI). 공개 배포용이 아니다: 기본으로 127.0.0.1 에만 연다.
+
+실행: python -m seir_sim.web  (또는 scripts/run_web.py) -> http://127.0.0.1:8765
+화면 구분: 시나리오(가정에 따른 결과) / 예측 검증(과거 자료로 잰 성능) / 최신 자료 예측(기점 이후 4주) / 자료 출처.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+from fastapi import Body, FastAPI, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
+
+from .jobs import JobManager
+
+ROOT = Path(__file__).resolve().parents[2]
+STATIC = Path(__file__).parent / "static"
+NAME = re.compile(r"^[A-Za-z0-9_]{1,40}$")
+EXPORTS = {"daily.csv": "text/csv", "regions.csv": "text/csv", "summary.json": "application/json",
+           "run_record.json": "application/json", "ensemble.nc": "application/x-netcdf",
+           "config.json": "application/json", "result.json": "application/json"}
+
+
+def create_app(job_root: Path | None = None, max_concurrent: int = 1) -> FastAPI:
+    app = FastAPI(title="재감염 SEIR 시뮬레이터 (로컬)", docs_url="/api/docs", redoc_url=None)
+    jobs = JobManager(job_root or ROOT / "outputs" / "web_jobs", max_concurrent=max_concurrent)
+    app.state.jobs = jobs
+
+    def _job_dir(job_id):
+        try:
+            return jobs.dir(job_id)
+        except KeyError:
+            raise HTTPException(404, "작업 없음")
+
+    # ------------------------------------------------------------------ 기본
+    @app.get("/api/health")
+    def health():
+        return {"ok": True}
+
+    @app.get("/api/defaults")
+    def defaults():
+        from .scenario import ScenarioRequest, disease_defaults
+        return {"disease": disease_defaults(), "disease_label": "COVID 유사 코드 검증용 가정 (실제 추정치 아님)",
+                "scenario_schema": ScenarioRequest.model_json_schema()}
+
+    # ------------------------------------------------------------------ 데이터셋
+    @app.get("/api/datasets")
+    def datasets():
+        from ..data.versions import Registry
+        out = []
+        for n, e in Registry().list().items():
+            out.append({"name": n, "active": e["active"], "history": e["history"],
+                        "versions": [{k: v.get(k) for k in ("version", "registered_utc", "K", "population_total",
+                                                             "population_source", "synthetic", "note", "sha256")}
+                                     | {"validation": v["validation"], "diff_vs_active": v.get("diff_vs_active")}
+                                     for v in e["versions"]]})
+        return out
+
+    @app.get("/api/datasets/{name}/geojson")
+    def dataset_geojson(name: str, version: str | None = None):
+        if not NAME.match(name) or (version and not re.match(r"^v\d{1,4}$", version)):
+            raise HTTPException(400, "잘못된 이름")
+        from .datasets import geojson_for
+        try:
+            return geojson_for(name, version)
+        except KeyError:
+            raise HTTPException(404, "데이터셋 없음")
+
+    @app.get("/api/datasets/{name}/regions")
+    def dataset_regions(name: str):
+        if not NAME.match(name):
+            raise HTTPException(400, "잘못된 이름")
+        from ..data.dataset import RegionDataset
+        from ..data.versions import Registry
+        try:
+            ds = RegionDataset.load(Registry().resolve(name))
+        except KeyError:
+            raise HTTPException(404, "데이터셋 없음")
+        return {"ids": ds.ids, "names": ds.names, "population": [None if p != p else float(p) for p in ds.population],
+                "provenance": {k: ds.provenance.get(k) for k in ("scope", "boundaries", "population", "assumptions",
+                                                                 "climate", "built_utc")}}
+
+    @app.post("/api/datasets/{name}/activate")
+    def dataset_activate(name: str, body: dict = Body(...)):
+        from ..data.versions import Registry
+        v = str(body.get("version", ""))
+        if not NAME.match(name) or not re.match(r"^v\d{1,4}$", v):
+            raise HTTPException(400, "잘못된 이름")
+        try:
+            Registry().activate(name, v)
+        except (KeyError, ValueError) as e:
+            raise HTTPException(409, str(e))
+        return {"active": v}
+
+    @app.post("/api/datasets/{name}/rollback")
+    def dataset_rollback(name: str):
+        from ..data.versions import Registry
+        if not NAME.match(name):
+            raise HTTPException(400, "잘못된 이름")
+        try:
+            return {"active": Registry().rollback(name)}
+        except (KeyError, ValueError) as e:
+            raise HTTPException(409, str(e))
+
+    @app.post("/api/datasets/{name}/population-table")
+    def dataset_population_table(name: str, body: dict = Body(...)):
+        """본문: {"table_text": CSV 문자열, "note": 설명}. 새 버전을 만들어 등록한다 (활성화는 하지 않음)."""
+        from .datasets import check_population_table
+        if not NAME.match(name):
+            raise HTTPException(400, "잘못된 이름")
+        text = str(body.get("table_text", ""))
+        try:
+            chk = check_population_table(text)
+        except (ValueError, KeyError) as e:
+            raise HTTPException(422, str(e))
+        jid = jobs.submit("dataset", {"name": name, "table_text": text, "note": str(body.get("note", ""))[:200]},
+                          f"{name} 인구표 갱신")
+        return {"job_id": jid, "check": chk}
+
+    # ------------------------------------------------------------------ 작업
+    @app.post("/api/scenarios")
+    def scenario_submit(body: dict = Body(...)):
+        from .scenario import ScenarioRequest, build_config
+        from ..config.schema import Config
+        try:
+            req = ScenarioRequest.model_validate(body)
+            Config.model_validate(build_config(req))
+        except ValidationError as e:
+            raise HTTPException(422, json.loads(e.json(include_url=False)))
+        if req.dataset != "synthetic_single":
+            from ..data.dataset import RegionDataset
+            from ..data.versions import Registry
+            if req.dataset not in Registry().list():
+                raise HTTPException(422, f"데이터셋 {req.dataset} 이 저장소에 없다")
+            ids = set(RegionDataset.load(Registry().resolve(req.dataset)).ids)
+            bad = [s.region for s in req.seeds if s.region not in ids]
+            bad += [r for i in req.interventions for r in (i.regions or []) if r not in ids]
+            if req.r0_reference == "region" and req.reference_region not in ids:
+                bad.append(str(req.reference_region))
+            if bad:
+                raise HTTPException(422, f"데이터셋에 없는 지역: {bad[:5]}")
+        return {"job_id": jobs.submit("scenario", req.model_dump(mode="json"), req.title)}
+
+    @app.post("/api/forecasts")
+    def forecast_submit(body: dict = Body(...)):
+        from ..surveillance.sources import COUNTRIES
+        iso3 = str(body.get("iso3", ""))
+        if iso3 not in COUNTRIES:
+            raise HTTPException(422, f"지원 국가: {list(COUNTRIES)}")
+        return {"job_id": jobs.submit("forecast", {"iso3": iso3, "origin": body.get("origin")}, f"{iso3} 최신 자료 예측")}
+
+    @app.get("/api/jobs")
+    def jobs_list():
+        return jobs.list()
+
+    @app.get("/api/jobs/{job_id}")
+    def job_status(job_id: str):
+        _job_dir(job_id)
+        return {k: v for k, v in jobs.status(job_id).items() if k != "traceback"}
+
+    @app.delete("/api/jobs/{job_id}")
+    def job_cancel(job_id: str):
+        _job_dir(job_id)
+        return jobs.cancel(job_id)
+
+    @app.get("/api/jobs/{job_id}/summary")
+    def job_summary(job_id: str):
+        d = _job_dir(job_id)
+        for f in ("summary.json", "result.json"):
+            if (d / f).exists():
+                return JSONResponse(json.loads((d / f).read_text()))
+        raise HTTPException(404, "결과가 아직 없다")
+
+    @app.get("/api/jobs/{job_id}/export/{fname}")
+    def job_export(job_id: str, fname: str):
+        d = _job_dir(job_id)
+        if fname not in EXPORTS or not (d / fname).exists():
+            raise HTTPException(404, "파일 없음")
+        return FileResponse(d / fname, media_type=EXPORTS[fname], filename=f"{job_id[:8]}_{fname}")
+
+    # ------------------------------------------------------------------ 검증·출처
+    @app.get("/api/validation")
+    def validation():
+        out = {}
+        for key, f in (("forecast", "5_forecast_validation.json"), ("calibration", "3_calibration.json"),
+                       ("d007_d004", "D007_D004.json")):
+            p = ROOT / "docs" / "reports" / f
+            if p.exists():
+                d = json.loads(p.read_text())
+                if key == "calibration":
+                    d = {"period": d.get("period"), "synthetic": d.get("synthetic"),
+                         "countries": {c: {k: v.get(k) for k in ("success", "hessian_pd", "diagnostics", "delay_c", "k_f")}
+                                       for c, v in d.get("countries", {}).items()},
+                         "rho_profile": d.get("rho_profile"), "interpretation": d.get("interpretation")}
+                if key == "d007_d004":
+                    d = {"recommended_eps": d.get("D007_recommended_eps"), "reps": d.get("reps")}
+                out[key] = d
+        return out
+
+    @app.get("/api/forecast-history")
+    def forecast_history(iso3: str, var: str = "cases", knot: int = 14):
+        import pandas as pd
+        if not NAME.match(iso3) or var not in ("cases", "deaths") or knot not in (7, 14):
+            raise HTTPException(400, "잘못된 값")
+        p = ROOT / "outputs" / "stage5" / f"forecasts_k{knot}.parquet"
+        if not p.exists():
+            return {"iso3": iso3, "var": var, "rows": [], "label": "5단계 예측 결과 파일이 아직 없다 (scripts/report_stage5_forecast.py)"}
+        df = pd.read_parquet(p)
+        df = df[(df["iso3"] == iso3) & (df["var"] == var)]
+        rows = df[["origin", "method", "h", "target_end", "truth", "q1", "q4", "q7"]].copy()
+        rows["origin"] = rows["origin"].astype(str).str[:10]
+        rows["target_end"] = rows["target_end"].astype(str).str[:10]
+        rows = rows.astype(object).where(rows.notna(), None)
+        return {"iso3": iso3, "var": var, "rows": rows.to_dict("records"),
+                "label": "과거 자료 시간순 검증: 각 기점에서 그날까지의 자료만으로 만든 예측 (최종판 자료 사용)"}
+
+    @app.get("/api/sources")
+    def sources():
+        from ..data.assumptions import ASSUMPTIONS
+        from ..data.registry import TIER
+        man = json.loads((ROOT / "data_raw" / "manifest.json").read_text()) if (ROOT / "data_raw" / "manifest.json").exists() else {}
+        rows = []
+        for did, e in man.items():
+            rows.append({"id": did, "kind": e.get("kind"), "status": e.get("status"), "title": e.get("title"),
+                         "source": e.get("source"), "license": e.get("license"), "version": e.get("version"),
+                         "time_reference": e.get("time_reference"), "retrieved_utc": e.get("retrieved_utc"),
+                         "tier": TIER.get(did, (None, None))[0], "redistribution": TIER.get(did, (None, None))[1],
+                         "files": len(e.get("files", []))})
+        return {"datasets": rows, "assumptions": ASSUMPTIONS,
+                "note": "출처를 확인할 수 없는 자료는 실제 자료로 쓰지 않는다. 미확보 자료는 미확보로 표시한다."}
+
+    # ------------------------------------------------------------------ 화면
+    app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
+    return app
