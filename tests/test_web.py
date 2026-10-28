@@ -144,6 +144,12 @@ def test_dataset_activate_and_rollback_via_api(client, tmp_path, monkeypatch):
     assert s["state"] == "done", s
     sm = client.get(f"/api/jobs/{jid}/summary").json()
     assert [r["id"] for r in sm["regions"]] == ["A", "B", "C"] and len(sm["frames"]["t"]) > 0
+    # 지도와 그래프의 일관성: 지도 프레임(지역별 평균 I)의 합 = 그래프의 전체 I 평균 (같은 시점)
+    t_daily = sm["daily"]["t"]
+    for i, t in enumerate(sm["frames"]["t"]):
+        k = t_daily.index(t)
+        assert sum(sm["frames"]["I"][i]) == pytest.approx(sm["daily"]["mean"][k], abs=0.2)
+        assert sum(sm["frames"]["D"][i]) == pytest.approx(sm["daily"]["D_mean"][k], abs=0.05)
     # 이동·통근을 끄면 A 밖으로 퍼지지 않는다
     jid = client.post("/api/scenarios", json={**req, "use_mobility": False, "use_commuting": False}).json()["job_id"]
     assert _wait(client, jid)["state"] == "done"
