@@ -66,4 +66,5 @@
 - 앙상블 크기: 대유행 확률이 분기 과정 이론값 0.936 과 일치 (400회 0.932 ± 0.013)
 - 민감도 (`docs/reports/9_sensitivity.md`): 무작위 결측 10% 에 안정, 보고율 하락은 치명률 배율 상승으로 오인될 수 있음
 - 종합 검증 `docs/VALIDATION_REPORT.md` (완료 기준 A~F 대비 상태, 한계), 사용자 안내서, 압축본 `scripts/make_release.py`
+- 최종 테스트: `python -m pytest` 221 passed (실패·건너뜀 0), 화면 시험 `tests/ui/smoke.mjs` 연속 3회 통과 (점검 48개)
 - 공개 배포는 하지 않음 (승인 필요)
