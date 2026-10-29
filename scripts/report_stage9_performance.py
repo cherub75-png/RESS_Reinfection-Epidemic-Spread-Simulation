@@ -43,6 +43,10 @@ CASES = {
     "kor17_hybrid_3y_x4_w4": (lambda: cfg({"source": "dataset", "path": "registry:KOR_admin1"}, [{"region": "KR-11", "count": 10}], 1095, "hybrid", 4, 4)),
     "world246_ode": (lambda: cfg({"source": "dataset", "path": "registry:world_countries"}, [{"region": "CHN", "count": 10}], 365, "ode", 1)),
     "world246_hybrid_eps0.01_x4_w4": (lambda: cfg({"source": "dataset", "path": "registry:world_countries"}, [{"region": "CHN", "count": 10}], 365, "hybrid", 4, 4, 0.01)),
+    # eps 에 따른 단계 수: 단계 수가 eps 에 반비례하면 계산 시간은 eps 조건(정확도)이 정한다
+    "world246_hybrid_eps0.03_x1": (lambda: cfg({"source": "dataset", "path": "registry:world_countries"}, [{"region": "CHN", "count": 10}], 365, "hybrid", 1, 1, 0.03)),
+    "world246_hybrid_eps0.01_x1": (lambda: cfg({"source": "dataset", "path": "registry:world_countries"}, [{"region": "CHN", "count": 10}], 365, "hybrid", 1, 1, 0.01)),
+    "world246_hybrid_eps0.003_x1": (lambda: cfg({"source": "dataset", "path": "registry:world_countries"}, [{"region": "CHN", "count": 10}], 365, "hybrid", 1, 1, 0.003)),
 }
 
 
@@ -55,7 +59,11 @@ def run_case(name, q):
     res = run_ensemble(c)
     wall = time.perf_counter() - t0
     s = res.summary()
+    steps = [m["steps"] for m in res.run_meta if "steps" in m]
+    exact = [m["exact_region_step_fraction"] for m in res.run_meta if "exact_region_step_fraction" in m]
     q.put({"case": name, "wall_s": wall, "runs": int(res.runs.shape[0]), "K": len(res.region_ids), "days": float(res.t[-1]),
+           "steps_mean": float(np.mean(steps)) if steps else None,
+           "exact_region_step_fraction": float(np.mean(exact)) if exact else None,
            "method": res.method, "peak_I_mean": s["peak_I_mean"], "result_MB": res.runs.nbytes / 1e6,
            "maxrss_MB_self": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
            "maxrss_MB_children": resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024})
@@ -127,10 +135,15 @@ def main():
     L = ["# 9단계 성능 측정 (자동 생성: scripts/report_stage9_performance.py)", "",
          f"환경: CPU {env.get('cpu_count', '?')}개, Python {env.get('python', '?')}. 각 경우를 별도 프로세스에서 실행 (최대 메모리 = 그 프로세스와 자식의 ru_maxrss).",
          "감염병 값은 코드 검증용 가정, 하이브리드 eps 는 표에 적은 값.", "",
-         "| 경우 | 방법 | 지역 수 | 기간 (일) | 실행 수 | 시간 (초) | 실행당 (초) | 결과 배열 MB | 최대 메모리 MB (본/자식) |", "|---|---|---|---|---|---|---|---|---|"]
+         "시간에는 데이터셋 불러오기·SHA-256 확인, 시나리오 구성, 병렬 작업자 시작이 포함된다. 실행당 = 전체 시간 / 실행 수 (작업자 4개면 동시에 4개씩).",
+         "단계 수 = 하이브리드·tau-leap 1회의 평균 시간 단계 수, 정확 비율 = (단계 x 지역) 중 사건 단위로 계산한 비율.", "",
+         "| 경우 | 방법 | 지역 수 | 기간 (일) | 실행 수 | 시간 (초) | 실행당 (초) | 단계 수 | 정확 비율 | 결과 배열 MB | 최대 메모리 MB (본/자식) |",
+         "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in results:
+        st = "–" if r.get("steps_mean") is None else f"{r['steps_mean']:,.0f}"
+        ex = "–" if r.get("exact_region_step_fraction") is None else f"{r['exact_region_step_fraction']:.3f}"
         L.append(f"| {r['case']} | {r['method']} | {r['K']} | {r['days']:.0f} | {r['runs']} | {r['wall_s']:.1f} | {r['wall_s'] / r['runs']:.2f} | "
-                 f"{r['result_MB']:.1f} | {r['maxrss_MB_self']:.0f} / {r['maxrss_MB_children']:.0f} |")
+                 f"{st} | {ex} | {r['result_MB']:.1f} | {r['maxrss_MB_self']:.0f} / {r['maxrss_MB_children']:.0f} |")
     L += ["", "## 앙상블 크기에 따른 안정성 (단일 지역 N = 1e5, 초기 3명, 하이브리드 400회 중 앞쪽 R 개)", "",
           "| R | 대유행 확률 | 표준오차 | 대유행 시 정점 평균 | 표준오차 |", "|---|---|---|---|---|"]
     def n0(v):
