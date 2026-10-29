@@ -14,7 +14,7 @@ python -m pytest                        # 단위·통합·API 테스트
 python -m seir_sim.web                  # 로컬 웹 화면 http://127.0.0.1:8765
 python -m seir_sim run configs/example_single_region.yaml --out outputs/single --method hybrid --runs 100
 ```
-실제 자료 내려받기와 데이터셋 만들기: `docs/USER_GUIDE.md` 2절.
+실제 자료 내려받기와 데이터셋 만들기: `docs/USER_GUIDE.md` 2절. 배포용 압축본(커밋된 내용 + 브랜치·커밋 정보): `python -I scripts/make_release.py`.
 
 ## 결과 구분
 | 종류 | 뜻 |

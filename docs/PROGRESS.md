@@ -1,6 +1,6 @@
 # 진행 기록
 
-마지막 갱신: 3단계 완료, 4~7단계 진행 (최종 완성 지시서에 따라 자율 진행). 전체 단계 현황: `docs/PROJECT_ROADMAP.md`
+마지막 갱신: 1~10단계 완료 (최종 완성 지시서에 따라 자율 진행, 미완성·차단 항목은 `docs/PROJECT_ROADMAP.md`). 종합 검증: `docs/VALIDATION_REPORT.md`
 
 ## 1단계 완료 항목 (테스트로 검증됨)
 | 항목 | 내용 | 검증 |
@@ -16,7 +16,7 @@
 | 1-D | 데이터 파이프라인 | 측지 면적 정확식, 날짜변경선, 격자 합, radiation 정확값, Tetens, 저장·불러오기, 9개국 1급 행정구역, 전 세계 품질 |
 | 1-E | 앙상블 실행기, CLI, 그림 | 1.6절 통계식, 병렬 = 직렬, 저장 왕복 |
 
-전체 테스트: `python -m pytest` → 156 passed (마지막 실행, 약 5분). 최종 보고: `docs/reports/STAGE1_REPORT.md`.
+1단계 끝 테스트: 156 passed. 최종 보고: `docs/reports/STAGE1_REPORT.md`. (현재 전체 테스트 수는 아래 9~10단계 절)
 
 ## 미완성 / 막힌 항목
 현재 목록은 `docs/PROJECT_ROADMAP.md` 의 "미완성·차단 항목" 표에 있다 (1단계 때의 목록은 이후 단계에서 해소되었거나 그 표로 옮겼다).
@@ -61,5 +61,9 @@
 - 홈·새 시뮬레이션·결과·비교·예측 검증·최신 예측·데이터 관리·자료 출처·갱신·도움말
 - 테스트: `tests/test_web.py` (API·보안), `tests/ui/smoke.mjs` (Playwright, 밝은·어두운·휴대폰 폭)
 
-## 9~10단계 (진행 중)
-- 성능 측정 `scripts/report_stage9_performance.py`, 민감도 `scripts/report_stage9_sensitivity.py`, 전체 테스트, 문서, 압축본
+## 9~10단계 (완료)
+- 성능 (`docs/reports/9_performance.md`): 대한민국 시도 하이브리드 1년 1회 5.3 초, 전 세계 246개 지역 1회 67 초 (eps 0.01). 단계 수가 eps 에 반비례 → 계산 시간은 정확도 조건이 정함
+- 앙상블 크기: 대유행 확률이 분기 과정 이론값 0.936 과 일치 (400회 0.932 ± 0.013)
+- 민감도 (`docs/reports/9_sensitivity.md`): 무작위 결측 10% 에 안정, 보고율 하락은 치명률 배율 상승으로 오인될 수 있음
+- 종합 검증 `docs/VALIDATION_REPORT.md` (완료 기준 A~F 대비 상태, 한계), 사용자 안내서, 압축본 `scripts/make_release.py`
+- 공개 배포는 하지 않음 (승인 필요)

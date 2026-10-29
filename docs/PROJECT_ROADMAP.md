@@ -12,8 +12,8 @@
 | 6 | 공간·자연환경 자료 완성, 업데이트 관리 | 부분 완료 (아래 미완성 항목) | `seir_sim/data/versions.py`, `seir_sim/data/updater.py` |
 | 7 | 엔진·자료·추정 결과 통합 | 완료 | `docs/reports/7_integration.md`, `tests/test_integration.py` |
 | 8 | 웹 애플리케이션 (로컬) | 완료 | `seir_sim/web/`, `tests/test_web.py`, `tests/ui/smoke.mjs` |
-| 9 | 성능·안정성·보안 종합 검증 | 진행 | `docs/VALIDATION_REPORT.md` |
-| 10 | 문서·배포 묶음 | 예정 | |
+| 9 | 성능·안정성·보안 종합 검증 | 완료 | `docs/VALIDATION_REPORT.md`, `docs/reports/9_performance.md`, `docs/reports/9_sensitivity.md` |
+| 10 | 문서·배포 묶음 (로컬 실행판 압축본) | 완료 (공개 배포는 승인 필요로 안 함) | `docs/USER_GUIDE.md`, `scripts/make_release.py` |
 
 ## 자료 접근 제약 (이 클라우드 환경)
 - 접근 가능: GitHub raw (OWID, JHU, OxCGRT, Natural Earth, OpenFlights, datahub), Google Cloud Storage (COVID-19 Open Data), PyPI, npm

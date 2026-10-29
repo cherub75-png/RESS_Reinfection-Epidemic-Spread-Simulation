@@ -91,6 +91,8 @@ python -I scripts/fetch_data.py <자료 id>                                   # 
 | `tau`, `sde` | 빠른 근사. 감염자가 적은 영역에서 부정확 |
 `simulation.tau_leap_epsilon` 기본값은 0.003 이다 (D-007 조건별 실험에서 하이브리드가 CTMC 와 일치한 값, `docs/reports/D007_D004.md`). 여러 지역 모형에서는 0.01 도 통과했으므로 계산이 무거운 전 세계 예제는 0.01 을 쓴다.
 SDE 는 감염자·감수성자가 몇 명 수준인 영역(초기 소멸, 마지막 감수성자)에서 편향이 있다. 그런 경우 하이브리드나 CTMC 를 쓴다.
+계산 시간 참고 (CPU 4개, `docs/reports/9_performance.md`): 대한민국 시도 1년 하이브리드 1회 약 5 초 (20회·작업자 4개 약 28 초), 전 세계 246개 지역 1회 약 67 초 (eps 0.01).
+웹 "점검·예상 계산량" 은 대략적인 값이다.
 
 ## 5. 결과 파일
 
@@ -104,6 +106,7 @@ SDE 는 감염자·감수성자가 몇 명 수준인 영역(초기 소멸, 마�
 - 같은 설정·같은 코드·같은 시드면 병렬 여부와 관계없이 같은 결과가 나온다 (테스트로 확인).
 - 데이터셋은 저장소에 SHA-256 과 함께 등록되며, 파일이 바뀌면 불러오기를 거부한다.
 - 보고서는 모두 `scripts/` 의 스크립트로 다시 만들 수 있다 (각 보고서 머리말에 명령이 있다).
+- 테스트: `python -m pytest` (단위·통합·API). 화면 시험: 웹 서버를 켠 뒤 `node tests/ui/smoke.mjs http://127.0.0.1:8765` (Node 와 Playwright·Chromium 필요, `npm i playwright && npx playwright install chromium`).
 
 ## 7. 한계 (요약)
 
