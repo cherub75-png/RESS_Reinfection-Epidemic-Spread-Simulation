@@ -19,7 +19,7 @@ import pandas as pd
 
 MIN_TESTS_FEATURE = 10
 MIN_TESTS_TARGET = 20
-UK_PARTS = {"X09": "GBR", "X10": "GBR", "X11": "GBR", "X12": "GBR"}
+UK_PARTS = {"X09": "GBR", "X10": "GBR", "X11": "GBR", "X12": "GBR", "XKX": "KOS"}   # 경계 자료(Natural Earth) 코드로
 COLS = ["COUNTRY_CODE", "COUNTRY_AREA_TERRITORY", "ORIGIN_SOURCE", "ISO_WEEKSTARTDATE", "HEMISPHERE", "ITZ",
         "SPEC_PROCESSED_NB", "INF_A", "INF_B", "INF_ALL", "INF_NEGATIVE"]
 

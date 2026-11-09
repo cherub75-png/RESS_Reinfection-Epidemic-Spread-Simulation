@@ -159,3 +159,106 @@ def region_table(period_dir: str | Path, regions, ids: list[str], out_csv: str |
         w.writeheader()
         w.writerows(rows)
     return {"rows": len(rows), "months": sorted({r["month"] for r in rows}), "period": prov["period"]}
+
+
+# ------------------------------------------------------------------ 지역별 주간 계열 (예측 특성용)
+def cell_weights(regions) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """ERA5 0.25° 격자 셀 -> 지역 대응 (셀 번호, 지역 번호, cos 위도 가중치). 셀 중심이 지역 안에 있는 셀,
+    하나도 없으면 대표점에서 가장 가까운 셀 하나 (zonal_mean 과 같은 규칙)."""
+    import shapely
+    lat = 90.0 - 0.25 * np.arange(NLAT)
+    lon = 0.25 * np.arange(NLON)
+    lon180 = ((lon + 180.0) % 360.0) - 180.0
+    cells, regs, wts = [], [], []
+    for k, g in enumerate(regions.geoms):
+        x0, y0, x1, y1 = g.bounds
+        ri = np.flatnonzero((lat >= y0 - 0.25) & (lat <= y1 + 0.25))
+        ci = np.flatnonzero((lon180 >= x0 - 0.25) & (lon180 <= x1 + 0.25))
+        found = False
+        if ri.size and ci.size:
+            R, C = np.meshgrid(ri, ci, indexing="ij")
+            inside = shapely.contains_xy(g, lon180[C], lat[R])
+            if inside.any():
+                r, c = R[inside], C[inside]
+                cells.append(r * NLON + c)
+                regs.append(np.full(r.size, k))
+                wts.append(np.cos(np.radians(lat[r])))
+                found = True
+        if not found:
+            p = g.representative_point()
+            r = int(np.argmin(np.abs(lat - p.y)))
+            c = int(np.argmin(np.abs(((lon180 - p.x + 180.0) % 360.0) - 180.0)))
+            cells.append(np.array([r * NLON + c]))
+            regs.append(np.array([k]))
+            wts.append(np.array([np.cos(np.radians(lat[r]))]))
+    return np.concatenate(cells), np.concatenate(regs), np.concatenate(wts)
+
+
+def _field_or_none(var: str, i: int):
+    try:
+        return _field(var, i)
+    except Exception:                    # 아직 없는 시각 (확정·예비판 범위 밖) 은 결측
+        return None
+
+
+def weekly_region_series(regions, ids: list[str], start_week: str, end_week: str, hours=(0, 12),
+                         workers: int = 16, log=print) -> "pd.DataFrame":
+    """지역별 ISO 주(월요일 시작) 평균 2 m 기온 T(°C), 수증기압 e(kPa), 절대습도 AH(g/m³).
+
+    AH = 2166.8 e / (T + 273.15) (e = e_s(이슬점), Tetens). 표본: 매일 hours (UTC) 시각.
+    확정 ERA5 마지막 날 뒤는 ERA5T 예비판이다 (era5t_samples 로 표시). 예비판도 없는 시각은 빠진다.
+    """
+    import pandas as pd
+
+    from .climate import saturation_vapor_pressure_kpa
+    attrs = dataset_attrs()
+    stop = dt.datetime.fromisoformat(attrs["valid_time_stop"]) + dt.timedelta(hours=23)
+    stop_t = dt.datetime.fromisoformat(attrs.get("valid_time_stop_era5t", attrs["valid_time_stop"])) + dt.timedelta(hours=23)
+    cells, regs, w = cell_weights(regions)
+    K = len(ids)
+    wsum = np.bincount(regs, weights=w, minlength=K)
+    weeks = pd.date_range(start_week, end_week, freq="7D")
+    if (weeks.dayofweek != 0).any():
+        raise ValueError("start_week 는 월요일이어야 한다")
+    times = [dt.datetime(d.year, d.month, d.day, h) for d in pd.date_range(weeks[0], weeks[-1] + pd.Timedelta(days=6)) for h in hours]
+    times = [t for t in times if t <= stop_t]
+    sT = np.zeros((len(weeks), K))
+    sE = np.zeros((len(weeks), K))
+    n = np.zeros(len(weeks), int)
+    nt = np.zeros(len(weeks), int)
+    w0 = weeks[0].to_pydatetime()
+
+    def one(t):
+        i = hour_index(t)
+        a, b = _field_or_none("2m_temperature", i), _field_or_none("2m_dewpoint_temperature", i)
+        if a is None or b is None:
+            return t, None, None
+        T = a.ravel()[cells].astype(float) - 273.15
+        E = saturation_vapor_pressure_kpa(b.ravel()[cells].astype(float) - 273.15)
+        return t, np.bincount(regs, weights=w * T, minlength=K) / wsum, np.bincount(regs, weights=w * E, minlength=K) / wsum
+
+    import time as _time
+    t0 = _time.perf_counter()
+    with ThreadPoolExecutor(workers) as ex:
+        for k, (t, T, E) in enumerate(ex.map(one, times), 1):
+            if T is not None:
+                j = (t - w0).days // 7
+                sT[j] += T
+                sE[j] += E
+                n[j] += 1
+                nt[j] += t > stop
+            if k % 500 == 0 or k == len(times):
+                log(f"ERA5 주간 {k}/{len(times)} 시각 ({_time.perf_counter() - t0:.0f}초)")
+    rows = []
+    for j, wk in enumerate(weeks):
+        if n[j] == 0:
+            continue
+        T, E = sT[j] / n[j], sE[j] / n[j]
+        for k, rid in enumerate(ids):
+            rows.append((wk, rid, T[k], E[k], 2166.8 * E[k] / (T[k] + 273.15), int(n[j]), int(nt[j])))
+    out = pd.DataFrame(rows, columns=["week", "id", "tavg", "vapr", "ah", "samples", "era5t_samples"])
+    out.attrs.update({"source": "ERA5 (Google ARCO-ERA5)", "url": BASE, "hours_utc": list(hours),
+                      "valid_time_stop": attrs["valid_time_stop"], "valid_time_stop_era5t": attrs.get("valid_time_stop_era5t"),
+                      "dataset_last_updated": attrs.get("last_updated"), "rule": "셀 중심 포함, cos(위도) 가중",
+                      "wall_seconds": round(_time.perf_counter() - t0, 1)})
+    return out
