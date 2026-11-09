@@ -14,19 +14,21 @@
 | 8 | 웹 애플리케이션 (로컬) | 완료 | `seir_sim/web/`, `tests/test_web.py`, `tests/ui/smoke.mjs` |
 | 9 | 성능·안정성·보안 종합 검증 | 완료 | `docs/VALIDATION_REPORT.md`, `docs/reports/9_performance.md`, `docs/reports/9_sensitivity.md` |
 | 10 | 문서·배포 묶음 (로컬 실행판 압축본) | 완료 (공개 배포는 승인 필요로 안 함) | `docs/USER_GUIDE.md`, `scripts/make_release.py` |
+| 11 | 인플루엔자 (WHO FluNet) 시간순 예측 검증·최신 예측, 구간 보정 | 완료 | `docs/reports/11_influenza_protocol.md`, `docs/reports/11_influenza_validation.md`, `docs/reports/12_interval_calibration.md` |
+| 12 | 최신 자료·시기 선택, 웹 작업 공간 | 완료 | `seir_sim/data/periods.py`, `seir_sim/web/`, D-021 |
 
 ## 자료 접근 제약 (이 클라우드 환경)
-- 접근 가능: GitHub raw (OWID, JHU, OxCGRT, Natural Earth, OpenFlights, datahub), Google Cloud Storage (COVID-19 Open Data), PyPI, npm
-- 차단 (403): WHO, ECDC, CDC, KDCA, KOSIS, data.go.kr, World Bank API, UN WPP, WorldPop, GPW, WorldClim, Open-Meteo, NASA POWER, Zenodo, figshare, Hugging Face
-- 차단된 자료는 "미확보" 로 기록하고, 로컬 파일 입력 경로를 제공한다 (6단계).
+- 2026-11 사용자가 네트워크 허용 도메인을 추가함: WHO FluNet, KOSIS, 공공데이터포털, 질병청, 기상청, World Bank, UN, WorldPop, WorldClim 서버 접속 가능.
+- API 키가 필요한 KOSIS·공공데이터포털·기상청 API허브는 키가 없어 쓰지 않았다 (환경 변수 `KOSIS_API_KEY`, `DATA_GO_KR_KEY`, `KMA_API_KEY` 가 있으면 쓸 수 있음).
 
 ## 미완성·차단 항목 (실제 상태)
 | 항목 | 상태 | 이유 / 대안 |
 |---|---|---|
-| 대한민국 시도 인구 (1차 자료) | 2차 자료로 대체 | KOSIS·WorldPop 차단. Google Open Data 시도 인구(원출처 미기록)를 secondary 로 표시해 사용. 1차 자료는 로컬 인구표 경로로 교체 가능 |
-| 기후 (WorldClim, ERA5) | 미확보 | 서버 차단. 대한민국 시도만 NOAA 관측소 기반 2020~2022 월 평균(2차) 있음. 기후 효과 g 는 추정하지 않음 (g = 1) |
-| 시도별 u(t) 추정 | 안 함 | 시도 확진이 2020-09-09 까지만 있음 (2차 자료) |
-| 지역 간 이동 실측량 | 미확보 | 항공 승객·통근 통계 서버 차단. 노선 구조는 실제, 규모는 가정값 |
-| 최신(현재) 예측 | 불가 | 확보한 감염병 자료가 2023-03-09 에 끝남. 2023-03 기점 예측만 가능 |
-| 백신·변이 구획 | 없음 | 방정식(1절) 범위 밖. u(t)·치명률 배율에 흡수 |
-| 공개 배포 | 안 함 | 사용자 승인 필요. 로컬 실행판만 제공 |
+| 대한민국 시도 인구 (주민등록, 1차) | WorldPop 모델 추정으로 대체 | KOSIS API 키 없음. 2020년 값은 2차 자료 표와 중앙 1.2% 차이 |
+| 시도별 u(t) 추정 | 보류 | 공식 시도별 일별 확진(공공데이터포털 API, 키 필요) 없음 (D-026) |
+| 기후 효과 g 추정 | 안 함 | u(t) 와 함께 식별 어려움. 기후 특성의 예측 기여는 시험함 (기여 없음) (D-025) |
+| 지역 간 이동 실측량 | 미확보 | 노선 구조는 실제(2014), 규모는 가정값. 공식 이동 통계는 KOSIS 키 필요, 항공 승객 OD 는 유료 |
+| COVID-19 현재 시점 예측 | 불가 | 확진·사망 자료가 2023-03-09 에 끝남. 인플루엔자는 최신 예측 가능 |
+| 자료 빈티지 (소급 보완 재현) | 없음 | FluNet·JHU 는 받은 날의 최종판. 2026-11 부터 받은 판을 보관함 |
+| 백신·변이 구획 | 없음 | 방정식(1절) 범위 밖 (사용자 결정: 방정식 변경 안 함) |
+| 공개 배포·PR | 안 함 | 사용자 결정 |
