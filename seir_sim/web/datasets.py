@@ -38,7 +38,11 @@ def geojson_for(name: str, version: str | None = None) -> dict:
         return json.loads(cache.read_text())
     ds = RegionDataset.load(reg.resolve(f"{name}@{version}"))
     kind, a3 = _scope(ds.provenance)
-    if kind == "admin0":
+    if ds.provenance.get("boundary_file"):                     # 통계청 SGIS 시도 경계 (admdongkor 시점 파일)
+        from ..data.boundaries import load_kostat_sido
+        geo = load_kostat_sido(RAW / "admdongkor_sido" / ds.provenance["boundary_file"])
+        tol = 0.005
+    elif kind == "admin0":
         geo = load_admin0(RAW / "ne_admin0_10m" / "ne_10m_admin_0_countries.geojson")
         tol = 0.08
     elif kind == "admin1":

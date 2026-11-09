@@ -30,6 +30,7 @@ def relative_humidity(T, vapor_kpa):
 
 def zonal_mean(path: str | Path, regions: RegionGeometry, band: int = 1) -> np.ndarray:
     import rasterio
+    import rasterio.errors
     from rasterio.windows import Window, from_bounds
 
     out = np.full(regions.K, np.nan)
@@ -37,17 +38,20 @@ def zonal_mean(path: str | Path, regions: RegionGeometry, band: int = 1) -> np.n
         geographic = ds.crs is None or ds.crs.is_geographic
         for k, g in enumerate(regions.geoms):
             win = from_bounds(*g.bounds, transform=ds.transform).round_offsets().round_lengths()
-            win = win.intersection(Window(0, 0, ds.width, ds.height))
-            arr = ds.read(band, window=win).astype(float)
-            if arr.size == 0:
-                continue
-            tr = ds.window_transform(win)
-            rows, cols = np.indices(arr.shape)
-            xs = tr.c + (cols + 0.5) * tr.a
-            ys = tr.f + (rows + 0.5) * tr.e
-            ok = shapely.contains_xy(g, xs, ys) & np.isfinite(arr)
-            if ds.nodata is not None:
-                ok &= arr != ds.nodata
+            try:
+                win = win.intersection(Window(0, 0, ds.width, ds.height))
+                arr = ds.read(band, window=win).astype(float)
+            except rasterio.errors.WindowError:     # 셀 하나보다 작은 지역: 창이 비면 대표점 셀로
+                arr = np.empty((0, 0))
+            ok = np.zeros(arr.shape, bool)
+            if arr.size:
+                tr = ds.window_transform(win)
+                rows, cols = np.indices(arr.shape)
+                xs = tr.c + (cols + 0.5) * tr.a
+                ys = tr.f + (rows + 0.5) * tr.e
+                ok = shapely.contains_xy(g, xs, ys) & np.isfinite(arr)
+                if ds.nodata is not None:
+                    ok &= arr != ds.nodata
             if not ok.any():
                 c = g.representative_point()        # 지역이 셀보다 작으면 대표점의 셀 값
                 r, cidx = ds.index(c.x, c.y)

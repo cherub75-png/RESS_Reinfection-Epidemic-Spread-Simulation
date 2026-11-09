@@ -82,3 +82,34 @@ def load_admin1(path: str | Path, country_a3: str) -> RegionGeometry:
     ids = [p.get("iso_3166_2") if p.get("iso_3166_2") not in (None, "", "-99") else p["adm1_code"] for p, _ in items]
     names = [p.get("name_en") or p.get("name") for p, _ in items]
     return _build(items, ids, names, f"Natural Earth admin 1 ({country_a3}): {Path(path).name}")
+
+
+# 행정안전부 시도 코드 (행정기관코드 앞 2자리) -> ISO 3166-2:KR. 2023 강원(42 -> 51), 2024 전북(45 -> 52) 처럼 코드가 바뀐
+# 시도는 같은 ISO 코드로 잇는다. ISO 코드가 없는 새 시도(예: 2026-07 전남광주통합특별시, 코드 12)는 "KR-<코드>" 로 둔다.
+KOSTAT_SIDO_TO_ISO = {"11": "KR-11", "26": "KR-26", "27": "KR-27", "28": "KR-28", "29": "KR-29", "30": "KR-30",
+                      "31": "KR-31", "36": "KR-50", "41": "KR-41", "42": "KR-42", "51": "KR-42", "43": "KR-43",
+                      "44": "KR-44", "45": "KR-45", "52": "KR-45", "46": "KR-46", "47": "KR-47", "48": "KR-48",
+                      "50": "KR-49"}
+
+
+def load_kostat_sido(path: str | Path) -> RegionGeometry:
+    """통계청 SGIS 행정동 경계 기반 시도 경계 (admdongkor parquet, EPSG:4326 light 판) -> 대한민국 시도 지역.
+
+    id = ISO 3166-2 (위 표), ISO 코드가 없는 시도는 KR-<시도코드>. 이름은 자료의 한글 이름 (sidonm).
+    """
+    import pyarrow.parquet as pq
+    import shapely
+    t = pq.read_table(path).to_pydict()
+    items, ids, names = [], [], []
+    for cd, nm, wkb in zip(t["sidocd"], t["sidonm"], t["geometry"]):
+        g = shapely.from_wkb(wkb)
+        if g is None or g.is_empty:
+            continue
+        if not g.is_valid:
+            g = shapely.make_valid(g)
+        items.append(({"sidocd": cd, "sidonm": nm, "iso_3166_2": KOSTAT_SIDO_TO_ISO.get(cd)}, g))
+        ids.append(KOSTAT_SIDO_TO_ISO.get(cd, f"KR-{cd}"))
+        names.append(nm)
+    if not items:
+        raise ValueError(f"시도 경계가 없다: {path}")
+    return _build(items, ids, names, f"KOSTAT SGIS 행정동 경계 기반 시도 (admdongkor): {Path(path).name}")

@@ -96,6 +96,20 @@ def _data(args):
         out = {"active": args.target}
     elif args.action == "rollback":
         out = {"active": reg.rollback(args.name)}
+    elif args.action == "periods":
+        from .data import periods
+        out = periods.options(periods.family(RegionDataset.load(reg.resolve(args.name)).provenance))
+    elif args.action == "variant":
+        from .data import periods
+        path = periods.variant(args.name, population_year=args.population_year, climate_period=args.climate_period,
+                               boundary_date=args.boundary_date, log=lambda m: print(m, file=sys.stderr))
+        out = {"path": str(path), "use_in_config": {"regions": {"source": "dataset", "path": str(path)}}}
+    elif args.action == "climate":
+        from .data import era5, periods
+        if not (args.start and args.end):
+            raise SystemExit("climate: --start YYYY-MM --end YYYY-MM 가 필요하다")
+        out = era5.monthly_means(args.start, args.end, periods.CLIMATE / f"era5_{args.start}_{args.end}",
+                                 log=lambda m: print(m, file=sys.stderr))
     else:
         out = reg.diff(args.name, None, RegionDataset.load(args.target))
     print(json.dumps(out, ensure_ascii=False, indent=1, default=str))
@@ -116,12 +130,19 @@ def main(argv=None):
     b.add_argument("--outbreak-threshold", type=float, default=1000.0, help="대유행 판정: max I_total >= 이 값")
     b.add_argument("--outlines", default=None, help="지도 배경 경계 GeoJSON (선택)")
     b.add_argument("--no-plots", action="store_true")
-    c = sub.add_parser("data", help="지역 데이터셋 버전 관리 (list / validate / register / activate / rollback / diff)")
-    c.add_argument("action", choices=["list", "validate", "register", "activate", "rollback", "diff"])
+    c = sub.add_parser("data", help="지역 데이터셋 버전 관리 (list / validate / register / activate / rollback / diff) "
+                                    "와 자료 시기 선택 (periods / variant / climate)")
+    c.add_argument("action", choices=["list", "validate", "register", "activate", "rollback", "diff", "periods", "variant",
+                                      "climate"])
     c.add_argument("--name", help="데이터셋 이름 (예: KOR_admin1)")
     c.add_argument("target", nargs="?", help="validate/register/diff: .nc 파일, activate: 버전 (예: v2)")
     c.add_argument("--note", default=None)
     c.add_argument("--force", action="store_true", help="검증 실패 버전도 활성화 (권장하지 않음)")
+    c.add_argument("--population-year", type=int, default=None, help="variant: 인구 기준 연도")
+    c.add_argument("--climate-period", default=None, help="variant: 기후 기간 폴더 이름 (예: era5_2025-07_2026-06)")
+    c.add_argument("--boundary-date", default=None, help="variant: 경계 시점 YYYY-MM-DD (대한민국 시도)")
+    c.add_argument("--start", default=None, help="climate: ERA5 기간 시작 YYYY-MM")
+    c.add_argument("--end", default=None, help="climate: ERA5 기간 끝 YYYY-MM (포함)")
     f = sub.add_parser("forecast", help="최신 자료 기점의 4주 예측 (5단계와 같은 방법; 기점 뒤 자료 사용 안 함)")
     f.add_argument("--country", required=True, help="ISO3 (예: KOR)")
     f.add_argument("--origin", default=None, help="기점 날짜 (기본: 자료 마지막 날 이전 일요일)")

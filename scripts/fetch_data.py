@@ -39,7 +39,7 @@ def head_size(url: str) -> tuple[str, int | None]:
 
 def download(url: str, dest: Path) -> tuple[bool, str]:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run(["curl", "-sSfL", "--max-time", "600", "-o", str(dest), url], capture_output=True, text=True)
+    r = subprocess.run(["curl", "-sSfL", "--max-time", "1800", "-o", str(dest), url], capture_output=True, text=True)
     return r.returncode == 0, r.stderr.strip()
 
 
@@ -63,11 +63,11 @@ def main(ids):
                  "retrieved_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}
         if not d.urls:
             entry["status"] = "unavailable: " + d.note
-        for url in d.urls:
+        for j, url in enumerate(d.urls):
             status, size = head_size(url)
-            name = url.rstrip("/").split("/")[-1]
+            name = d.files[j] if j < len(d.files) else url.rstrip("/").split("/")[-1]
             dest = RAW / did / name
-            ok, err = download(url, dest) if " 200" in status else (False, status)
+            ok, err = download(url, dest)          # HEAD 를 막는 서버도 있어 GET 결과로 판단한다 (HEAD 상태는 기록만)
             f = {"url": url, "head_status": status, "content_length": size}
             if ok:
                 f.update({"path": str(dest.relative_to(ROOT)), "bytes": dest.stat().st_size, "sha256": sha256(dest)})

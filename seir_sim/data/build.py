@@ -15,7 +15,7 @@ import numpy as np
 from ..provenance import git_commit
 from . import commuting, mobility
 from . import population as popmod
-from .boundaries import RegionGeometry, load_admin0, load_admin1
+from .boundaries import RegionGeometry, load_admin0, load_admin1, load_kostat_sido
 from .dataset import RegionDataset
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -106,3 +106,25 @@ def build_admin1(admin1_path, country_a3: str, airports_path, routes_path, air_t
     return _assemble(geo, pop, meta, airports_path, routes_path, air_trips_per_day, commute_fraction,
                      destination_contact_share, {"scope": f"{country_a3}, admin 1",
                                                  "keep_missing_population": True})
+
+
+def build_kor_sido(boundary_parquet, airports_path, routes_path, air_trips_per_day: float, commute_fraction: float,
+                   destination_contact_share: float, population_raster: str | Path | None = None,
+                   population_table: str | Path | None = None) -> RegionDataset:
+    """대한민국 시도 (통계청 SGIS 경계 시점 파일). 인구는 격자(WorldPop) 또는 인구표. 없으면 NaN (미확보)."""
+    geo = load_kostat_sido(boundary_parquet)
+    if population_raster is not None and population_table is not None:
+        raise ValueError("인구 격자와 인구표 중 하나만 준다")
+    if population_raster is not None:
+        pop, meta = popmod.from_raster(population_raster, geo)
+        meta["inputs"] = [_input_record(population_raster)]
+    elif population_table is not None:
+        pop, meta = popmod.from_table(population_table, geo)
+        meta["inputs"] = [_input_record(population_table)]
+    else:
+        pop = np.full(geo.K, np.nan)
+        meta = {"source": "미확보", "reason": "인구 격자·인구표가 없다", "inputs": []}
+    meta["inputs"].append(_input_record(boundary_parquet))
+    return _assemble(geo, pop, meta, airports_path, routes_path, air_trips_per_day, commute_fraction,
+                     destination_contact_share, {"scope": "KOR, admin 1 (KOSTAT sido)", "keep_missing_population": True,
+                                                 "boundary_file": str(Path(boundary_parquet).name)})

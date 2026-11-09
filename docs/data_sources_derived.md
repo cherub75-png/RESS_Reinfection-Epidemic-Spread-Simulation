@@ -9,6 +9,16 @@
 | `data_processed/KOR_admin1_gc19od.nc` (저장소 등록 이름 `KOR_admin1` v1) | `scripts/build_regions.py admin1 --population-table ... --climate-table ...` | NE admin1 경계, 위 두 표, OpenFlights | 측지 면적·중심, 균형 항공 ω, radiation 통근 C | 혼합 (아래 가정 포함) |
 | `data_processed/world_countries_2019.nc` (등록 이름 `world_countries` v1) | `scripts/build_regions.py world --year 2019 ...` | NE admin0, World Bank 2019 (+ NE POP_EST), OpenFlights | 같은 처리 | 혼합 (아래 가정 포함) |
 | `outputs/stage5/*` | `scripts/run_stage5_seir.py`, `scripts/report_stage5_forecast.py` | JHU, OxCGRT, Google 이동, OWID 백신·인구 | 시간순 예측 결과 (예측값이며 관측값 아님) | 모형 산출물 |
+| `data_processed/tables/wb_population_api.csv` | `scripts/convert_wb_api.py` | wb_population_api (World Bank 공식 API, lastupdated 2026-10-08) | 열 형식만 바꿈 (값 그대로). datahub 사본과 겹치는 17,130개 (국가, 연도) 값이 모두 같음 (2026-11-09 확인) | compiled |
+| `data_processed/climate/era5_<시작>_<끝>/` | `seir_sim/data/era5.py` (`python -m seir_sim data climate --start --end`) | ERA5 (Google ARCO-ERA5 Zarr v3) 2 m 기온·이슬점 | 매일 00·06·12·18 UTC 표본의 달력 월별 평균 (기온 °C, 수증기압 kPa = e_s(이슬점)); 확정 ERA5 범위만 | 재분석 (관측 동화 모델 자료) |
+| `data_processed/variants/*.nc` | `seir_sim/data/periods.py` (`python -m seir_sim data variant`) | 경계 시점, 인구 연도, 기후 기간 선택 | 원본과 같은 이동 가정값으로 다시 만든 데이터셋 + 지역별 월 기후 (셀 중심 포함, cos 위도 가중; 셀보다 작은 지역은 대표점 셀) | 혼합 (선택한 자료에 따름) |
+| 등록 이름 `KOR_admin1` v2 | `scripts/build_latest_datasets.py` | SGIS 시도 경계 2026-10-01 (16개 시도), WorldPop R2025A 2025, ERA5 2025-07 ~ 2026-06 | 위 변형본을 등록·활성화 | 혼합: 경계 compiled, 인구 모델 추정, 기후 재분석, 이동 가정 |
+| 등록 이름 `world_countries` v2 | 같은 스크립트 | Natural Earth admin 0, World Bank 2025 (공식 API), ERA5 2025-07 ~ 2026-06 | 같은 처리 | 혼합 |
+
+### 발견한 자료 문제: Natural Earth 1:10m 시도 경계 (2026-11-09)
+- 대한민국 광역시의 면적이 실제보다 매우 작다: 광주 133 km² (실제 약 501), 부산 282 (약 770), 인천 367 (약 1,067), 대전 366 (약 539), 대구 466 (2020년 약 883). geoBoundaries 의 대한민국 시도도 같은 Natural Earth 경계다.
+- 영향: (1) 인구 격자를 이 경계로 합산하면 광주가 52만 명으로 나온다 (실제 약 149만). (2) `KOR_admin1` v1 은 인구표(2차 자료)를 썼으므로 인구는 맞지만 인구밀도(인구 / 면적)가 광역시에서 2~4배 과대하다 → 밀도 함수 h(ρ) = (ρ/ρ_ref)^0.2 가 광역시에서 약 1.1~1.3배 크다. v1 로 만든 시도 단위 시나리오에 이 편향이 있다. 국가 단위 추정·예측 검증(3·5단계)은 단일 지역이라 영향이 없다.
+- 조치: `KOR_admin1` v2 부터 통계청 SGIS 기반 경계(admdongkor)를 쓴다. WorldPop 2020 을 이 경계로 합산한 값과 2차 자료 인구표의 차이는 중앙 1.2%, 최대 세종 +14% (빠른 인구 증가로 기준 시점이 다른 것으로 보임), 인천 −6.6%.
 
 등록된 데이터셋의 SHA-256·검증 결과·이전 버전과의 차이: `data_processed/datasets/registry.json` (`python -m seir_sim data list`).
 
@@ -24,6 +34,7 @@
 | 보고율 rho | 0.5 | 3·5단계 추정 | 식별 불가 (D-011) |
 | R0_max | 6 | 3·5단계 추정 | u = 0 기준값, 상한 역할 (D-012) |
 | 감염병 매개변수 (σ, γ, P, T, f, λ 등) | 1단계 COVID 유사 값 | 엔진·추정 | 코드 검증용 가정. 실제 COVID-19 추정치가 아님 |
+| 국가 단위 이동 노선 구조 | OpenFlights 노선 (2014년 6월 기준) | 전 세계·시도 데이터셋 | 실제 자료이나 오래됨. 최신 공개 노선 자료는 확보하지 못함 (ICAO·OAG 는 유료) |
 
 ### 실제 관측값·추정값·예측값 구분
 - 관측값: `data_raw/` 의 원자료와, 원자료를 그대로 옮긴 표 (위 표의 secondary 표 포함).
