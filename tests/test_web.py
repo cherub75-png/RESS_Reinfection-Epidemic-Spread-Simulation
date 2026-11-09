@@ -265,3 +265,14 @@ def test_climate_period_input_validation(client):
 
 def test_flu_latest_requires_a_finished_job(client):
     assert client.get("/api/flu/latest").status_code == 404
+
+
+def test_delete_right_after_done_and_manager_keeps_working(client):
+    """완료 직후 바로 지워도 되고, 지운 뒤에도 작업 관리자가 다음 작업을 실행한다."""
+    for _ in range(3):
+        jid = client.post("/api/scenarios", json=BASE).json()["job_id"]
+        assert _wait(client, jid)["state"] == "done"
+        r = client.delete(f"/api/jobs/{jid}/files")
+        assert r.status_code == 200, r.text
+    jid = client.post("/api/scenarios", json=BASE).json()["job_id"]
+    assert _wait(client, jid, timeout=120)["state"] == "done"

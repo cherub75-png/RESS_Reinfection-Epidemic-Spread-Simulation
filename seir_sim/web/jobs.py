@@ -144,7 +144,10 @@ class JobManager:
                 write_status(d, state="failed", message=f"시간 상한 {self.max_seconds:.0f}초를 넘어 중단했다")
             with self.lock:
                 self.procs.pop(job_id, None)
-            s = self.status(job_id)
+            try:
+                s = self.status(job_id)
+            except (KeyError, OSError):                         # 사용자가 끝난 작업을 지웠다: 다음 작업으로
+                continue
             if s.get("state") == "running":                   # 프로세스가 비정상 종료
                 write_status(d, state="failed", message=f"작업 프로세스 종료 코드 {p.exitcode}")
 
@@ -170,8 +173,14 @@ class JobManager:
         if self.status(job_id).get("state") in ("queued", "running"):
             raise ValueError("대기 중이거나 실행 중인 작업은 지울 수 없다 (먼저 취소)")
         with self.lock:
-            if job_id in self.procs:
-                raise ValueError("작업 프로세스가 아직 끝나지 않았다")
+            p = self.procs.get(job_id)
+        if p is not None:                                     # 완료를 기록한 뒤 프로세스가 끝나기까지 잠깐 기다린다
+            import time
+            t0 = time.time()
+            while p.is_alive() and time.time() - t0 < 15:
+                time.sleep(0.1)
+            if p.is_alive():
+                raise ValueError("작업 프로세스가 아직 끝나지 않았다 (잠시 뒤 다시)")
         if d.parent.resolve() != self.root.resolve():
             raise ValueError("작업 폴더 위치가 올바르지 않다")
         shutil.rmtree(d)
