@@ -64,6 +64,10 @@ def _job_main(kind: str, job_dir: str, env: dict | None = None) -> None:
             (d / "result.json").write_text(json.dumps(out, ensure_ascii=False, default=str))
             if out["result"] == "failed":
                 raise RuntimeError(out.get("message", "갱신 실패"))
+        elif kind == "flu_forecast":
+            from ..forecast.flu_operational import latest_flu_forecast
+            out = latest_flu_forecast(with_seir=bool(req.get("seir")), log=lambda m: write_status(d, message=m))
+            (d / "result.json").write_text(json.dumps(out, ensure_ascii=False))
         elif kind == "climate":
             from ..data import era5, periods
             out = era5.monthly_means(req["start"], req["end"], periods.CLIMATE / f"era5_{req['start']}_{req['end']}",

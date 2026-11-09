@@ -140,3 +140,13 @@ def test_baseline_matches_bruteforce_loop():
                     err = np.concatenate([err, -err])
                 want.append(expit(p + np.quantile(err, QUANTILES)))
             np.testing.assert_allclose(got, np.array(want), rtol=0, atol=1e-12)
+
+
+def test_operational_origin_skips_partly_reported_week():
+    """기점 = 계열 절반 이상이 보고한 가장 최근 주의 전 주 (그 주는 덜 보고되어 있음)."""
+    from seir_sim.forecast.flu_operational import operational_origin
+    df = _synthetic_df(n_weeks=60, series=("AAA|SENTINEL", "BBB|SENTINEL", "CCC|SENTINEL", "DDD|SENTINEL"))
+    last = df["week"].max()
+    df.loc[(df["week"] == last) & (df["series"] != "AAA|SENTINEL"), "tests"] = np.nan       # 마지막 주는 1/4 만 보고
+    prev = last - pd.Timedelta(weeks=1)
+    assert operational_origin(df, sorted(df["series"].unique())) == prev - pd.Timedelta(weeks=1)

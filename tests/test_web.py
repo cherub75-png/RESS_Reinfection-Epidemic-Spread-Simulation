@@ -261,3 +261,7 @@ def test_climate_period_input_validation(client):
         assert client.post("/api/climate-periods", json=bad).status_code == 422, bad
     assert client.get("/api/datasets/KOR_admin1/regions?boundary_date=20261001").status_code == 400
     assert client.post("/api/scenarios/check", json={**BASE, "climate_period": "../etc"}).status_code == 422
+
+
+def test_flu_latest_requires_a_finished_job(client):
+    assert client.get("/api/flu/latest").status_code == 404

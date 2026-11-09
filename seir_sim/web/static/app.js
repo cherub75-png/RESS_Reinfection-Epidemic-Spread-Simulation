@@ -1055,7 +1055,93 @@ async function loadHistory() {
 }
 
 // ------------------------------------------------------------------ 최신 자료 예측
+// ---- 인플루엔자 (WHO FluNet 최신 자료)
+const FLU_LABEL = { persistence: "지속", seasonal: "계절 평균", ml: "ML", ml_cal: "ML + 구간 보정", seir: "SEIR (보조)" };
+const FLU_BINS = [0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4];
+let FLU = null, fluMap = null, fluLayer = null, fluGeo = null;
+const pp = (v) => (v === null || v === undefined || !isFinite(v) ? "–" : (100 * v).toFixed(1) + "%");
+async function initFlu() {
+  $("#flu-run").addEventListener("click", runFlu);
+  $("#flu-h").addEventListener("change", drawFluMap);
+  $("#flu-series").addEventListener("change", drawFluSeries);
+  try { renderFlu(await api("/api/flu/latest")); } catch (e) { $("#flu-info").textContent = "아직 결과가 없다. '최신 자료로 예측 실행' 을 누른다 (1~3분)."; }
+}
+async function runFlu() {
+  $("#flu-msg").textContent = "";
+  let r; try { r = await api("/api/flu/forecasts", { method: "POST", body: JSON.stringify({ seir: $("#flu-seir").checked }) }); }
+  catch (e) { $("#flu-msg").textContent = e.message; return; }
+  $("#flu-run").disabled = true; $("#flu-progress").hidden = false; $("#flu-bar").style.width = "15%";
+  const t = setInterval(async () => {
+    const st = await api(`/api/jobs/${r.job_id}`).catch(() => null); if (!st) return;
+    $("#flu-msg").textContent = `${stateLabel(st.state)} ${st.message || ""}`;
+    if (st.state === "running") $("#flu-bar").style.width = "55%";
+    if (["done", "failed", "cancelled", "interrupted"].includes(st.state)) {
+      clearInterval(t); $("#flu-run").disabled = false; $("#flu-bar").style.width = "100%";
+      if (st.state === "done") renderFlu({ job_id: r.job_id, ...(await api(`/api/jobs/${r.job_id}/summary`)) });
+    }
+  }, 1500);
+}
+function fluBest(row) { return row.methods.ml_cal || row.methods.ml || null; }
+function renderFlu(res) {
+  FLU = res;
+  const info = $("#flu-info"); info.innerHTML = "";
+  info.append(el("div", {}, `기점 주 ${res.origin} (그 주까지의 자료만 사용) · 받은 자료의 마지막 주 ${res.data_last_week} · 자료 받은 시각 ${(res.retrieved_utc || "").replace("+00:00", " UTC")} · 실행 ${res.run_utc.replace("+00:00", " UTC")} · 출처 ${res.source} `,
+    el("span", { class: "tag fc" }, "예측"), " ", el("span", { class: "tag obs" }, "관측 = 실제 관측")));
+  for (const w of res.warnings || []) info.append(el("div", { class: "warn" }, w));
+  const sel = $("#flu-series"); const keep = sel.value; sel.innerHTML = "";
+  const rows = res.series.slice().sort((a, b) => a.name.localeCompare(b.name));
+  for (const r of rows) sel.append(el("option", { value: r.series }, `${r.name} · ${r.source}${r.warnings.length ? " ⚠" : ""}`));
+  sel.value = keep && rows.some((r) => r.series === keep) ? keep : (rows.find((r) => r.series === "KOR|SENTINEL") || rows[0]).series;
+  const v = res.validation;
+  $("#flu-val").textContent = v ? "과거 검증 (2022-10 ~ 2026-09, 같은 행, 지속 예측 대비 WIS 비, 낮을수록 좋음): " + Object.entries(v).map(([h, r]) => `${h}주 ML+보정 ${fmt(r.ml_cal, 2)}, 계절 ${fmt(r.seasonal, 2)}`).join(" · ")
+    + ". 자료가 최종판이라 실시간 성능보다 낙관적일 수 있다." : "과거 검증 결과가 아직 없다.";
+  drawFluSeries(); drawFluMap();
+  rerenderers.push(drawFluSeries);
+}
+function drawFluSeries() {
+  if (!FLU) return;
+  const r = FLU.series.find((x) => x.series === $("#flu-series").value); if (!r) return;
+  const hw = r.history.weeks, tw = FLU.target_weeks;
+  const xs = [...hw, ...tw].map((w) => new Date(w));
+  const pad = hw.map(() => null), padT = tw.map(() => null);
+  const series = [{ name: "관측 양성률", color: "--series-5", values: [...r.history.positivity, ...padT], points: true }];
+  const ms = ["ml_cal", "seasonal", "persistence", "seir"].filter((m) => r.methods[m]);
+  ms.forEach((m, k) => { const q = r.methods[m];
+    series.push({ name: FLU_LABEL[m], color: SERIES[k], dash: m === "ml_cal" ? "" : "5 3", values: [...pad.slice(0, -1), r.history.positivity.at(-1), ...q.map((x) => x[4])],
+      band: m === "ml_cal" ? [[...pad, ...q.map((x) => x[1])], [...pad, ...q.map((x) => x[7])]] : undefined }); });
+  legend($("#flu-lg"), [...series.map((x) => ({ name: x.name, color: x.color })), ...(r.methods.ml_cal ? [{ name: "ML+보정 90% 구간", color: SERIES[0], dash: true }] : [])]);
+  lineChart($("#flu-chart"), { xs, series, yMin: 0, yFormat: (y) => pp(y), xFormat: (x) => (x instanceof Date ? x.toISOString().slice(0, 10) : x), ariaLabel: `${r.name} 인플루엔자 양성률` });
+  const t = $("#flu-table"); t.innerHTML = "";
+  t.append(el("tr", {}, el("th", {}, "방법"), ...tw.map((w) => el("th", { class: "num" }, `${w} 주`))));
+  for (const m of ms) t.append(el("tr", {}, el("td", {}, FLU_LABEL[m]), ...r.methods[m].map((q) => el("td", { class: "num" }, `${pp(q[4])} (${pp(q[1])}–${pp(q[7])})`))));
+  const w = $("#flu-warn"); w.innerHTML = "";
+  for (const x of r.warnings) w.append(el("div", { class: "warn" }, x));
+  w.append(el("p", { class: "note" }, `기점 주 검사 수 ${r.last_tests === null ? "–" : fmt(r.last_tests)}건. 괄호 = 90% 예측 구간. 첫 대상 주는 이미 일부 보고가 시작된 주일 수 있다.`));
+}
+async function drawFluMap() {
+  if (!FLU) return;
+  const box = $("#flu-map");
+  if (!fluGeo) { try { fluGeo = await api("/api/datasets/world_countries/geojson"); } catch (e) { box.textContent = "세계 경계 없음: " + e.message; return; } }
+  const h = +$("#flu-h").value - 1;
+  const best = {};
+  for (const r of FLU.series) { const q = fluBest(r); if (!q) continue; const cur = best[r.iso3];
+    if (!cur || (r.last_tests || 0) > (cur.last_tests || 0)) best[r.iso3] = r; }
+  const col = (v) => { if (v === null || v === undefined) return css("--nodata"); let k = 0; while (k < FLU_BINS.length && v > FLU_BINS[k]) k++; return css(RAMP[Math.min(k, 7)]); };
+  if (!fluMap) { box.innerHTML = ""; fluMap = L.map(box, { attributionControl: true, zoomSnap: 0.25, worldCopyJump: true }); fluMap.attributionControl.setPrefix(false); fluMap.attributionControl.addAttribution("경계: Natural Earth · 자료: WHO FluNet"); }
+  if (fluLayer) fluLayer.remove();
+  fluLayer = L.geoJSON(fluGeo, { style: (f) => { const r = best[f.id]; const q = r && fluBest(r); return { color: css("--surface"), weight: 0.6, fillOpacity: 0.9, fillColor: col(q ? q[h][4] : null) }; },
+    onEachFeature: (f, layer) => layer.bindTooltip(() => { const r = best[f.id]; if (!r) return `${esc(f.properties.name)}<br>선택된 계열 없음`; const q = fluBest(r);
+      return `${esc(f.properties.name)} · ${esc(r.source)}<br>${esc(FLU.target_weeks[h])} 주 예측 ${esc(pp(q[h][4]))} (90% ${esc(pp(q[h][1]))}–${esc(pp(q[h][7]))})<br>기점 주 관측 ${esc(pp(r.history.positivity.at(-1)))}`; }, { sticky: true })
+      .on("click", () => { if (best[f.id]) { $("#flu-series").value = best[f.id].series; drawFluSeries(); } }) }).addTo(fluMap);
+  if (box.clientWidth > 0) { fluMap.invalidateSize(); fluMap.setView([25, 10], 1.25); }
+  const lg = $("#flu-legend"); lg.innerHTML = "예측 양성률: ";
+  const edges = [0, ...FLU_BINS];
+  edges.forEach((e, k) => lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css(RAMP[Math.min(k, 7)])}` }), k < FLU_BINS.length ? ` ≤${(100 * FLU_BINS[k]).toFixed(0)}%` : ` >${(100 * e).toFixed(0)}%`)));
+  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--nodata")}` }), " 계열 없음"));
+}
 function initLatest() {
+  $("#lf-disease").addEventListener("change", () => { const f = $("#lf-disease").value === "flu"; $("#lf-flu").hidden = !f; $("#lf-covid").hidden = f; if (f && fluMap) setTimeout(() => { fluMap.invalidateSize(); }, 50); });
+  initFlu();
   const cs = $("#lf-country"); COUNTRIES.forEach((x) => cs.append(el("option", { value: x }, x)));
   $("#lf-run").addEventListener("click", async () => {
     $("#lf-msg").textContent = "";

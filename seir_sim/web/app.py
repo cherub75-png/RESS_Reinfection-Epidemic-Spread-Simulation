@@ -341,6 +341,23 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
             raise HTTPException(422, f"지원 국가: {list(COUNTRIES)}")
         return {"job_id": jobs.submit("forecast", {"iso3": iso3, "origin": body.get("origin")}, f"{iso3} 최신 자료 예측")}
 
+    @app.post("/api/flu/forecasts")
+    def flu_forecast_submit(body: dict = Body(default={})):
+        """인플루엔자 최신 자료 예측 (WHO FluNet; 1~3분, seir 를 켜면 몇 분 더)."""
+        if not (ROOT / "data_raw" / "who_flunet" / "VIW_FNT.csv").exists():
+            raise HTTPException(409, "FluNet 자료가 없다 (scripts/fetch_data.py who_flunet)")
+        return {"job_id": jobs.submit("flu_forecast", {"seir": bool(body.get("seir", False))}, "인플루엔자 최신 자료 예측")}
+
+    @app.get("/api/flu/latest")
+    def flu_latest():
+        """가장 최근에 끝난 인플루엔자 최신 예측 작업의 결과."""
+        for j in jobs.list():
+            if j.get("kind") == "flu_forecast" and j.get("state") == "done":
+                p = jobs.dir(j["id"]) / "result.json"
+                if p.exists():
+                    return JSONResponse({"job_id": j["id"], **json.loads(p.read_text())})
+        raise HTTPException(404, "아직 인플루엔자 예측 결과가 없다 (예측 실행)")
+
     @app.get("/api/jobs")
     def jobs_list():
         return jobs.list()
