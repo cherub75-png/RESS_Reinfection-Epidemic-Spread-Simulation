@@ -23,6 +23,7 @@ dependencies = [
     "matplotlib>=3.11",
     "pandas>=3.0",
     "scikit-learn>=1.9",
+    "numcodecs>=0.17",            # ERA5 (Zarr) 청크 해독
 ]
 
 [project.optional-dependencies]

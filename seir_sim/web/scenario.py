@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import yaml
@@ -57,6 +57,35 @@ class DiseaseIn(BaseModel):
     M: int | None = Field(None, ge=2, le=20)                          # 감염 횟수 칸 수
 
 
+class UncertaintyIn(BaseModel):
+    """매개변수 불확실성: [하한, 상한] 범위에서 실행마다 균등 분포로 한 번씩 뽑는다 (사용자 가정 범위)."""
+    model_config = ConfigDict(extra="forbid")
+    R0: tuple[float, float] | None = None
+    incubation_days: tuple[float, float] | None = None
+    infectious_days: tuple[float, float] | None = None
+    immunity_days: tuple[float, float] | None = None
+    f1: tuple[float, float] | None = None
+
+    BOUNDS: ClassVar[dict] = {"R0": (0.0, 20.0), "incubation_days": (0.0, 60.0), "infectious_days": (0.0, 120.0),
+              "immunity_days": (0.0, 36500.0), "f1": (0.0, 1.0)}
+
+    @model_validator(mode="after")
+    def _ranges(self):
+        for k, (lo_b, hi_b) in self.BOUNDS.items():
+            v = getattr(self, k)
+            if v is None:
+                continue
+            lo, hi = v
+            if not lo < hi:
+                raise ValueError(f"불확실성 {k}: 하한 < 상한 이어야 한다")
+            if lo < lo_b or hi > hi_b or (k in ("R0", "incubation_days", "infectious_days") and lo <= 0):
+                raise ValueError(f"불확실성 {k}: 허용 범위 ({lo_b}, {hi_b}] 밖")
+        return self
+
+    def active(self) -> dict:
+        return {k: getattr(self, k) for k in self.BOUNDS if getattr(self, k) is not None}
+
+
 class ScenarioRequest(BaseModel):
     """화면에서 받는 시나리오 (모든 값 검증; 비운 값은 기본 가정값)."""
     model_config = ConfigDict(extra="forbid")
@@ -88,6 +117,11 @@ class ScenarioRequest(BaseModel):
     hybrid_up: float = Field(100, ge=2, le=1e6)
     hybrid_down: float = Field(50, ge=1, le=1e6)
     seed: int = Field(20260101, ge=0, le=2**31)
+    # 자료 시기 (None = 저장소의 활성 버전 그대로). data.periods 가 같은 가정값으로 데이터셋을 다시 만든다.
+    boundary_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")         # 경계 시점 (대한민국 시도)
+    population_year: int | None = Field(None, ge=1960, le=2100)                     # 인구 기준 연도
+    climate_period: str | None = Field(None, pattern=r"^era5_\d{4}-\d{2}_\d{4}-\d{2}$")   # 기후 기간 (ERA5)
+    uncertainty: UncertaintyIn | None = None                                        # 매개변수 불확실성 범위
 
     @model_validator(mode="after")
     def _check(self):
@@ -138,10 +172,28 @@ def disease_block(dz: DiseaseIn) -> tuple[dict, dict]:
     return d, src
 
 
-def _region_populations(dataset: str) -> dict:
+def uses_periods(req: ScenarioRequest) -> bool:
+    return any(v is not None for v in (req.boundary_date, req.population_year, req.climate_period))
+
+
+def dataset_spec(req: ScenarioRequest, with_climate: bool = True, log=lambda m: None) -> str:
+    """설정의 regions.path: 저장소 활성 버전 ("registry:이름") 또는 고른 시기의 변형본 파일 경로."""
+    if not uses_periods(req) or (not with_climate and req.boundary_date is None and req.population_year is None):
+        return f"registry:{req.dataset}"
+    from ..data.periods import variant
+    return str(variant(req.dataset, population_year=req.population_year, boundary_date=req.boundary_date,
+                       climate_period=req.climate_period if with_climate else None, log=log))
+
+
+def load_request_dataset(req: ScenarioRequest, with_climate: bool = True):
     from ..data.dataset import RegionDataset
     from ..data.versions import Registry
-    ds = RegionDataset.load(Registry().resolve(dataset))
+    spec = dataset_spec(req, with_climate)
+    return RegionDataset.load(Registry().resolve(spec[len("registry:"):]) if spec.startswith("registry:") else spec)
+
+
+def _region_populations(req: ScenarioRequest) -> dict:
+    ds = load_request_dataset(req, with_climate=False)
     return dict(zip(ds.ids, ds.population.tolist()))
 
 
@@ -157,9 +209,9 @@ def build_config(req: ScenarioRequest, populations: dict | None = None) -> dict:
         pops = {"region0": float(req.population or 1e6)}
         seeds_regions = ["region0" for _ in req.seeds]
     else:
-        regions = {"source": "dataset", "path": f"registry:{req.dataset}", "use_mobility": req.use_mobility,
+        regions = {"source": "dataset", "path": dataset_spec(req), "use_mobility": req.use_mobility,
                    "use_commuting": req.use_commuting}
-        pops = populations if populations is not None else _region_populations(req.dataset)
+        pops = populations if populations is not None else _region_populations(req)
         seeds_regions = [s.region for s in req.seeds]
     seeds = []
     for r, s in zip(seeds_regions, req.seeds):
@@ -230,13 +282,142 @@ def estimate_cost(req: ScenarioRequest, K: int, population: float) -> dict:
             "note": "경험식 추정 (실제 시간은 감염 규모·이동망에 따라 크게 다를 수 있음)"}
 
 
-def run_scenario(req_raw: dict, job_dir: Path, cancel=None, progress=None) -> dict:
+class LiveWriter:
+    """실행 중 화면 갱신용 live.json: 지역별 I·E·D (프레임) 와 전체 S·E·I·D (일별) 의 평균.
+
+    kind: "ode_preview" (시작 직후 결정론 ODE 1회, 확률 실행 결과 아님) -> "ensemble" (끝난 실행들의 평균, runs_done/n_runs)
+    -> "final". 1초에 한 번까지만 쓴다. status.json 의 live_seq 가 바뀌면 화면이 다시 읽는다.
+    """
+
+    def __init__(self, job_dir: Path, t: np.ndarray, ids: list[str], N0: np.ndarray, n_runs: int, labels: dict):
+        self.d, self.t, self.ids, self.N0, self.n_runs, self.labels = Path(job_dir), t, ids, N0, n_runs, labels
+        self.fi = np.arange(0, t.size, max(1, int(np.ceil(t.size / 120))))
+        self.sum = None
+        self.n = 0
+        self.seq = 0
+        self.last = 0.0
+
+    def preview(self, out: np.ndarray) -> None:
+        self._write(np.asarray(out, float), "ode_preview")
+
+    def add(self, r: int, out: np.ndarray) -> None:
+        import time
+        o = np.asarray(out, float)
+        self.sum = o.copy() if self.sum is None else self.sum + o
+        self.n += 1
+        if time.time() - self.last >= 1.0 or self.n == self.n_runs:
+            self._write(self.sum / self.n, "ensemble")
+
+    def final(self) -> None:
+        if self.sum is not None:
+            self._write(self.sum / self.n, "final")
+
+    def _write(self, mean: np.ndarray, kind: str) -> None:
+        import time
+        from .jobs import write_status
+        fi = self.fi
+        tot = mean.sum(axis=2)                                           # [4, T]
+        payload = {"kind": kind, "runs_done": self.n, "n_runs": self.n_runs, "ids": self.ids,
+                   "population": [round(float(v), 1) for v in self.N0], "t_frames": self.t[fi].tolist(),
+                   "I": _clean(mean[2][fi], 1), "E": _clean(mean[1][fi], 1), "D": _clean(mean[3][fi], 2),
+                   "daily": {"t": self.t.tolist(), "S": _clean(tot[0], 1), "E": _clean(tot[1], 1), "I": _clean(tot[2], 1),
+                             "D": _clean(tot[3], 2)},
+                   "population_total": float(self.N0.sum()), "labels": self.labels}
+        tmp = self.d / "live.tmp"
+        tmp.write_text(json.dumps(payload, ensure_ascii=False))
+        tmp.replace(self.d / "live.json")
+        self.seq += 1
+        self.last = time.time()
+        write_status(self.d, live_seq=self.seq, live_kind=kind)
+
+
+def parameter_draws(req: ScenarioRequest) -> list[dict]:
+    """실행마다 한 번씩 뽑은 매개변수 값 (불확실성 범위가 없으면 빈 목록). 시드에서 결정된다 (재현 가능)."""
+    if req.uncertainty is None or not req.uncertainty.active():
+        return []
+    rng = np.random.default_rng([req.seed, 7_000_001])
+    act = req.uncertainty.active()
+    return [{k: float(rng.uniform(lo, hi)) for k, (lo, hi) in act.items()} for _ in range(req.n_runs)]
+
+
+def apply_draw(req: ScenarioRequest, draw: dict, seed: int) -> ScenarioRequest:
+    dz = req.disease.model_copy(update={k: v for k, v in draw.items() if k != "R0"})
+    return req.model_copy(update={"disease": dz, "R0": draw.get("R0", req.R0), "n_runs": 1, "n_workers": 1, "seed": seed})
+
+
+def _draw_one(args):
+    req_raw, draw, seed = args
     from ..config.schema import Config
     from ..ensemble.runner import run_ensemble
+    req = apply_draw(ScenarioRequest.model_validate(req_raw), draw, seed)
+    res = run_ensemble(Config.model_validate(build_config(req)))
+    return res.runs[0], res.run_meta[0], res.seeds[0]
+
+
+def _run_with_draws(req: ScenarioRequest, cfg, draws: list[dict], cancel, progress, on_run):
+    """불확실성 범위가 있을 때: 뽑은 매개변수마다 확률 실행 1회 (작업자가 여럿이면 병렬)."""
+    import time
+    from ..config.build import build_scenario
+    from ..ensemble.runner import EnsembleCancelled, EnsembleResult
+    seeds = [int(c.generate_state(1)[0]) for c in np.random.SeedSequence(req.seed).spawn(len(draws))]
+    jobs = [(req.model_dump(mode="json"), d, s) for d, s in zip(draws, seeds)]
+    t0 = time.perf_counter()
+    outs = [None] * len(draws)
+    if req.n_workers <= 1:
+        for r, a in enumerate(jobs):
+            if cancel is not None and cancel():
+                raise EnsembleCancelled(f"{r}/{len(draws)} 실행 후 취소")
+            outs[r] = _draw_one(a)
+            on_run(r, outs[r][0])
+            progress(r + 1, len(draws))
+    else:
+        import multiprocessing as mp
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(req.n_workers, mp_context=mp.get_context("forkserver")) as ex:
+            for r, o in enumerate(ex.map(_draw_one, jobs)):
+                outs[r] = o
+                on_run(r, o[0])
+                progress(r + 1, len(draws))
+                if cancel is not None and cancel():
+                    ex.shutdown(wait=False, cancel_futures=True)
+                    raise EnsembleCancelled(f"{r + 1}/{len(draws)} 실행 후 취소")
+    sc = build_scenario(cfg)
+    T = outs[0][0].shape[1]
+    return EnsembleResult(cfg.simulation.output_dt * np.arange(T), list(sc.system.regions.names),
+                          np.stack([o[0] for o in outs]), req.method, [{**o[2], "draw": d} for o, d in zip(outs, draws)],
+                          [o[1] for o in outs], cfg, sc.derived, time.perf_counter() - t0, 1000.0,
+                          {"n_workers": req.n_workers, "parameter_uncertainty": {
+                              "ranges": req.uncertainty.active(), "distribution": "균등 (실행마다 한 번 추출)",
+                              "draws": draws, "label": "사용자 가정 범위 (추정값 아님)"}})
+
+
+def run_scenario(req_raw: dict, job_dir: Path, cancel=None, progress=None) -> dict:
+    from ..config.build import build_scenario
+    from ..config.schema import Config
+    from ..ensemble.runner import run_ensemble
+    from .jobs import write_status
     req = ScenarioRequest.model_validate(req_raw)
+    if uses_periods(req):
+        write_status(job_dir, message="고른 시기의 자료로 데이터셋 준비 중")
+        dataset_spec(req, log=lambda m: write_status(job_dir, message=m))
     cfg = Config.model_validate(build_config(req))
     (job_dir / "config.json").write_text(cfg.model_dump_json(indent=1))
-    res = run_ensemble(cfg, progress=progress, cancel=cancel)
+    sc = build_scenario(cfg)
+    T = int(np.floor(cfg.simulation.days / cfg.simulation.output_dt + 1e-9)) + 1
+    draws = parameter_draws(req)
+    live = LiveWriter(job_dir, cfg.simulation.output_dt * np.arange(T), list(sc.system.regions.names),
+                      np.asarray(sc.system.regions.population, float), 1 if req.method == "ode" and not draws else req.n_runs,
+                      {"method": req.method, "uncertainty": bool(draws)})
+    if req.method != "ode" or draws:                                    # 바로 보이는 결정론 미리보기 (중앙값 매개변수)
+        prev = run_ensemble(Config.model_validate(build_config(req.model_copy(update={"method": "ode", "n_runs": 1,
+                                                                                         "n_workers": 1}))))
+        live.preview(prev.runs[0])
+    progress = progress or (lambda a, b: None)
+    if draws:
+        res = _run_with_draws(req, cfg, draws, cancel, progress, live.add)
+    else:
+        res = run_ensemble(cfg, progress=progress, cancel=cancel, on_run=live.add)
+    live.final()
     res.save(str(job_dir))
     summary = web_summary(res, req, cfg)
     (job_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, default=_json_default))
@@ -292,6 +473,13 @@ def web_summary(res, req: ScenarioRequest, cfg) -> dict:
     lb = sum(1 for m in res.run_meta if m.get("last_bin_warning"))
     if lb:
         warnings.append(f"{lb}개 실행에서 마지막 재감염 칸 점유율 경고 (M 부족 가능성).")
+    pu = res.info.get("parameter_uncertainty")
+    if pu:
+        warnings.append("띠는 확률적 변동과 매개변수 불확실성(사용자가 정한 범위에서 균등 추출)을 함께 반영한다: "
+                        + ", ".join(f"{k} {lo:g}~{hi:g}" for k, (lo, hi) in pu["ranges"].items()))
+    if uses_periods(req):
+        warnings.append(f"자료 시기: 경계 {req.boundary_date or '기본'}, 인구 {req.population_year or '기본'}, "
+                        f"기후 {req.climate_period or '기본'} (같은 이동 가정값으로 다시 만든 데이터셋)")
     _, src = disease_block(req.disease)
     names = list(res.region_ids)
     return {
@@ -302,6 +490,7 @@ def web_summary(res, req: ScenarioRequest, cfg) -> dict:
                    "parameters": src, "disease": cfg.disease.model_dump(mode="json"),
                    "environment": f"g: {cfg.environment.status}", "dataset": req.dataset},
         "derived": derived, "warnings": warnings,
+        "parameter_uncertainty": pu, "dataset_provenance": _dataset_provenance(res),
         "daily": {"t": res.t.tolist(), "mean": _clean(s["mean"]), "q05": _clean(s["q05"]), "q25": _clean(np.percentile(tot[:, 2], 25, axis=0)),
                   "q50": _clean(s["q50"]), "q75": _clean(np.percentile(tot[:, 2], 75, axis=0)), "q95": _clean(s["q95"]),
                   "E_mean": _clean(tot[:, 1].mean(axis=0)), "D_mean": _clean(tot[:, 3].mean(axis=0)),
@@ -321,6 +510,19 @@ def web_summary(res, req: ScenarioRequest, cfg) -> dict:
                    "D": _clean(mean[3][fi], 2), "first": _clean(first.mean(axis=0)[fi], 5),
                    "I_q05": _clean(q05i[fi], 1), "I_q95": _clean(q95i[fi], 1)},
     }
+
+
+def _dataset_provenance(res) -> dict:
+    """화면의 '입력 자료' 표시용: 경계·인구·기후·이동의 출처와 시점."""
+    p = res.derived.get("regions_provenance") or {}
+    pop = p.get("population") or {}
+    clim = p.get("climate") or {}
+    a = p.get("assumptions") or {}
+    return {"boundaries": p.get("boundaries"), "population": {k: pop.get(k) for k in ("source", "year", "rule")} | {
+                "primary": (pop.get("primary") or {}).get("source"), "year_world": p.get("population_year")},
+            "climate": {"periods": clim.get("periods"), "sources": clim.get("sources")},
+            "assumptions": {k: a.get(k) for k in ("air_trips_per_day", "commute_fraction", "destination_contact_share")},
+            "period_selection": p.get("period_selection")}
 
 
 def _write_csv(job_dir: Path, summary: dict) -> None:

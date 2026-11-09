@@ -79,8 +79,9 @@ function showTab(name) {
   for (const b of $$("#tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
   for (const s of $$("main > section")) s.hidden = s.id !== `tab-${name}`;
   if (!loaded[name]) { loaded[name] = true; ({ home: loadHome, results: loadJobs, validation: loadValidation, latest: initLatest, data: loadDatasets, sources: loadSources })[name]?.(); }
+  $("main").classList.toggle("wide", name === "run");
   if (name === "results") setTimeout(() => { if (rerenderMapFit) rerenderMapFit(); }, 50);
-  if (name === "run" && seedMap) setTimeout(() => seedMapFit && seedMapFit(), 50);
+  if (name === "run") setTimeout(wsFit, 50);
 }
 for (const b of $$("#tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
 for (const b of $$("[data-goto]")) b.addEventListener("click", () => showTab(b.dataset.goto));
@@ -193,7 +194,7 @@ function paramInput([key, label, defFn, step]) {
   const def = DEF ? defFn(DEF) : null;
   const tag = el("span", { class: "tag asm" }, "기본 가정값");
   const inp = el("input", { type: "number", name: `dz_${key}`, step, placeholder: def === null ? "" : String(+def.toFixed(4)), "data-default": def });
-  inp.addEventListener("input", () => { const user = inp.value !== ""; tag.className = `tag ${user ? "user" : "asm"}`; tag.textContent = user ? "사용자 입력" : "기본 가정값"; derived(); });
+  inp.addEventListener("input", () => { const user = inp.value !== ""; tag.className = `tag ${user ? "user" : "asm"}`; tag.textContent = user ? "사용자 입력" : "기본 가정값"; derived(); if (typeof renderInputSources === "function") renderInputSources(); });
   return el("label", {}, label, inp, tag);
 }
 function dzValue(key) { const i = $(`[name=dz_${key}]`); return i && i.value !== "" ? +i.value : null; }
@@ -232,9 +233,9 @@ $("#dz-del").addEventListener("click", async () => { const n = $("#dz-presets").
   try { await api(`/api/diseases/${encodeURIComponent(n)}`, { method: "DELETE" }); await loadPresets(); msg(`'${n}' 삭제`); } catch (e) { msg(e.message, true); } });
 function msg(t, err) { const m = $("#run-msg"); m.innerHTML = ""; m.append(el("span", { class: err ? "err" : "" }, t)); }
 
-// ------------------------------------------------------------------ 시나리오 양식
+// ------------------------------------------------------------------ 시나리오 양식 (오른쪽 입력 칸)
 let regionInfo = { ids: [], names: [], population: [] };
-let seedMap = null, seedLayer = null, seedMapFit = null, datasetHasClimate = false;
+let datasetHasClimate = false, PERIODS = null, BASE_PERIOD = null;
 async function initForm() {
   try { const df = await api("/api/defaults"); DEF = df.disease; } catch (_) { DEF = null; }
   $("#dz-basic").append(el("label", {}, "R0", el("input", { type: "number", name: "R0", value: "2.5", step: "0.1", min: "0.1", max: "20", oninput: derived }), el("span", { class: "tag user" }, "사용자 입력")));
@@ -242,6 +243,7 @@ async function initForm() {
   for (const p of ADV) $("#dz-adv").append(paramInput(p));
   derived();
   loadPresets();
+  initUncertainty();
   const sel = $("#f-dataset");
   let ds = [];
   try { ds = await api("/api/datasets"); } catch (e) { msg("데이터셋 목록 실패: " + e.message, true); }
@@ -252,76 +254,180 @@ async function initForm() {
   sel.append(el("option", { value: "synthetic_single" }, "합성 단일 지역 (실제 지역 아님)"));
   sel.addEventListener("change", () => onDataset());
   $("#f-basis").addEventListener("change", () => { $("#f-refreg-wrap").hidden = $("#f-basis").value !== "region"; });
-  $("#f-climate").addEventListener("change", () => { $("#f-climate-params").hidden = $("#f-climate").value === "none"; });
+  $("#f-climate").addEventListener("change", () => { $("#f-climate-params").hidden = $("#f-climate").value === "none"; renderInputSources(); });
   $("#add-seed").addEventListener("click", () => addSeed(regionInfo.ids[0], 10, 0));
   $("#add-int").addEventListener("click", () => addInt());
+  for (const id of ["#p-bound", "#p-pop"]) $(id).addEventListener("change", () => onDataset(true, true));
+  $("#p-clim").addEventListener("change", () => { onClimateChoice(); renderInputSources(); });
+  $("#p-latest").addEventListener("click", () => { setPeriodSelects(PERIODS && PERIODS.latest); onDataset(true, true); });
+  $("#p-cbtn").addEventListener("click", startClimateJob);
   await onDataset();
 }
-let dsToken = 0;
-async function onDataset(keepRows) {
+
+// ---- 자료 시기 (경계 시점 · 인구 연도 · 기후 기간)
+function fillSelect(sel, opts, value, fmtOpt) {
+  sel.innerHTML = "";
+  for (const o of opts) sel.append(el("option", { value: o.value, selected: String(o.value) === String(value) }, fmtOpt(o)));
+}
+function setPeriodSelects(v) {
+  if (!v) return;
+  if (v.boundaries !== undefined && v.boundaries !== null) $("#p-bound").value = v.boundaries;
+  if (v.population !== undefined && v.population !== null) $("#p-pop").value = String(v.population);
+  if (v.climate) $("#p-clim").value = v.climate;
+}
+async function loadPeriods(name) {
+  PERIODS = null; BASE_PERIOD = null;
+  $("#sec-periods").hidden = name === "synthetic_single";
+  if (name === "synthetic_single") return;
+  try { PERIODS = await api(`/api/datasets/${name}/periods`); } catch (e) { $("#p-note").textContent = "자료 시기 목록 실패: " + e.message; return; }
+  const P = PERIODS;
+  $("#p-bound-wrap").hidden = P.family !== "KOR";
+  fillSelect($("#p-bound"), P.boundaries, P.latest.boundaries, (o) => `${o.label}`);
+  fillSelect($("#p-pop"), P.population, P.latest.population, (o) => `${o.label}${o.note ? " · " + o.note : ""}`);
+  fillSelect($("#p-clim"), P.climate, P.latest.climate, (o) => `${o.label}${o.note ? " · " + o.note : ""}`);
+  if (!P.climate.length) $("#p-clim").append(el("option", { value: "" }, "확보한 기후 기간 없음"));
+  BASE_PERIOD = { ...P.latest };
+  $("#p-note").textContent = `인구: ${P.population[0]?.source || "미확보"} (${P.population[0]?.value ?? "–"}~${P.population.at(-1)?.value ?? "–"}) · ` +
+    `기후: ERA5 재분석 (관측 동화 모델 자료) · ${P.family === "KOR" ? "경계: 통계청 SGIS 기반, 1975~현재 시점 파일" : "경계: Natural Earth"}`;
+}
+function periodRequest() {
+  // 활성 버전(최신 자료)과 같으면 보내지 않는다 (저장소 버전을 그대로 쓴다)
+  if (!PERIODS) return {};
+  const b = PERIODS.family === "KOR" ? $("#p-bound").value || null : null, y = $("#p-pop").value ? +$("#p-pop").value : null, c = $("#p-clim").value || null;
+  const same = BASE_PERIOD && (PERIODS.family !== "KOR" || b === BASE_PERIOD.boundaries) && y === BASE_PERIOD.population && c === BASE_PERIOD.climate;
+  return same ? {} : { boundary_date: b, population_year: y, climate_period: c };
+}
+function periodQuery() {
+  const r = periodRequest(), q = [];
+  if (r.boundary_date) q.push(`boundary_date=${encodeURIComponent(r.boundary_date)}`);
+  if (r.population_year) q.push(`population_year=${r.population_year}`);
+  return q.length ? "?" + q.join("&") : "";
+}
+function onClimateChoice() {
+  datasetHasClimate = !!$("#p-clim").value || datasetHasClimate;
+  $("#f-climate").disabled = !$("#p-clim").value && !datasetHasClimate;
+}
+async function startClimateJob() {
+  const st = $("#p-cs").value, en = $("#p-ce").value;
+  $("#p-cmsg").textContent = "";
+  let r; try { r = await api("/api/climate-periods", { method: "POST", body: JSON.stringify({ start: st, end: en }) }); }
+  catch (e) { $("#p-cmsg").textContent = e.message; return; }
+  $("#p-cbtn").disabled = true;
+  const t = setInterval(async () => {
+    const s = await api(`/api/jobs/${r.job_id}`).catch(() => null); if (!s) return;
+    $("#p-cmsg").textContent = `${stateLabel(s.state)} ${s.message || ""}`;
+    if (["done", "failed", "cancelled", "interrupted"].includes(s.state)) {
+      clearInterval(t); $("#p-cbtn").disabled = false;
+      if (s.state === "done") { const keep = { boundaries: $("#p-bound").value, population: +$("#p-pop").value }; await loadPeriods($("#f-dataset").value);
+        setPeriodSelects({ ...keep, climate: `era5_${st}_${en}` }); renderInputSources(); $("#p-cmsg").textContent = `ERA5 ${st} ~ ${en} 준비됨`; }
+    }
+  }, 1500);
+}
+
+let dsToken = 0, lastProv = null;
+async function onDataset(keepRows, keepPeriods) {
   const token = ++dsToken;                   // 겹친 호출 중 마지막 것만 화면을 바꾼다
   const name = $("#f-dataset").value;
   $("#f-pop-wrap").hidden = name !== "synthetic_single";
-  datasetHasClimate = false;
+  if (!keepPeriods) await loadPeriods(name);
+  if (token !== dsToken) return;
+  datasetHasClimate = false; lastProv = null;
   if (name === "synthetic_single") { regionInfo = { ids: ["region0"], names: ["합성 지역"], population: [null] }; $("#f-dataset-note").textContent = "합성 단일 지역: 코드 검증용이며 실제 지역이 아니다."; }
   else {
+    $("#f-dataset-note").textContent = "지역 자료 준비 중… (다른 시기를 처음 고르면 몇 초 걸린다)";
     try {
-      const r = await api(`/api/datasets/${name}/regions`);
+      const r = await api(`/api/datasets/${name}/regions${periodQuery()}`);
       if (token !== dsToken) return;
-      regionInfo = r;
-      const p = r.provenance || {};
-      const pop = p.population || {};
-      datasetHasClimate = !!p.climate;
-      $("#f-dataset-note").innerHTML = "";
-      $("#f-dataset-note").append(`${r.ids.length}개 지역 · 경계: ${p.boundaries || "?"} `, el("span", { class: "tag obs" }, "실제 관측"), " · 인구: ",
-        `${pop.source || (pop.primary && pop.primary.source) || "?"} `, el("span", { class: "tag " + ((pop.tiers || []).includes("secondary") ? "sec" : "obs") }, (pop.tiers || []).includes("secondary") ? "2차 자료" : "실제 관측"),
-        ` · 항공 ${p.assumptions?.air_trips_per_day ?? "?"}회/일, 통근 ${p.assumptions?.commute_fraction ?? "?"}, 접촉 ${p.assumptions?.destination_contact_share ?? "?"} `, el("span", { class: "tag asm" }, "기본 가정값"));
+      regionInfo = r; lastProv = r.provenance || {};
+      datasetHasClimate = !!lastProv.climate || !!$("#p-clim").value;
+      $("#f-dataset-note").textContent = `${r.ids.length}개 지역 · 인구 합 ${fmt(r.population.reduce((a, b) => a + (b || 0), 0))}명`;
     } catch (e) { $("#f-dataset-note").textContent = "지역 목록 실패: " + e.message; }
   }
   $("#f-climate").disabled = !datasetHasClimate;
   if (!datasetHasClimate) { $("#f-climate").value = "none"; $("#f-climate-params").hidden = true; }
-  $("#f-climate-note").textContent = datasetHasClimate ? "기후 효과는 실제 자료로 추정하지 않았다. 켜면 사용자 가정값으로 표시된다 (기후 자료: 2020~2022 월 평균, 관측소 기반)."
+  $("#f-climate-note").textContent = datasetHasClimate ? "기후 효과는 실제 자료로 추정하지 않았다. 켜면 사용자 가정값으로 표시되며, 2절에서 고른 기후 기간의 월 평균 기온·습도를 쓴다."
     : "이 데이터셋에는 기후 자료가 없다 (미확보). 기후 효과를 켤 수 없다.";
   const ref = $("#f-refreg"); ref.innerHTML = "";
   regionInfo.ids.forEach((id, i) => ref.append(el("option", { value: id }, `${id} ${regionInfo.names[i] || ""}`)));
-  if (!keepRows) {
-    $("#f-seeds").innerHTML = ""; $("#f-ints").innerHTML = "";
-    addSeed(["KR-11", "CHN"].find((x) => regionInfo.ids.includes(x)) || regionInfo.ids[0], 10, 0);
+  const valid = new Set(regionInfo.ids);
+  if (!keepRows) { $("#f-seeds").innerHTML = ""; $("#f-ints").innerHTML = ""; }
+  for (const row of $$("#f-seeds .row")) if (!valid.has($("select", row).value)) row.remove();       // 경계 시점이 바뀌어 없어진 지역
+  if (!$$("#f-seeds .row").length) addSeed(["KR-11", "CHN"].find((x) => valid.has(x)) || regionInfo.ids[0], 10, 0);
+  else for (const row of $$("#f-seeds .row")) { const v = $("select", row).value; $("select", row).replaceWith(seedSelect(v)); }
+  renderInputSources();
+  await wsLoadGeo(name, token);
+}
+
+// ---- 입력 자료 표 (출처·시점·값의 종류)
+function renderInputSources() {
+  const t = $("#input-sources"); if (!t) return; t.innerHTML = "";
+  const row = (k, v, tag, cls) => t.append(el("tr", {}, el("td", { class: "muted" }, k), el("td", {}, v, " ", tag ? el("span", { class: "tag " + cls }, tag) : "")));
+  const name = $("#f-dataset").value;
+  if (name === "synthetic_single") { row("지역", "합성 단일 지역", "가정", "asm"); }
+  else if (lastProv) {
+    const p = lastProv, pop = p.population || {}, a = p.assumptions || {};
+    const ps = p.period_selection || {};
+    const kor = String(p.scope || "").startsWith("KOR");
+    row("경계", `${kor ? "통계청 SGIS 시도 경계" : "Natural Earth 국가 경계"}${ps.boundary_date ? " · " + ps.boundary_date : (p.boundary_file ? " · " + p.boundary_file.replace(/^sido_(\d{4})(\d\d)(\d\d).*/, "$1-$2-$3") : "")}`, "실제 관측", "obs");
+    const ysel = $("#p-pop").value;
+    if (kor) row("인구", `WorldPop R2025A ${ysel || ps.population_year || ""} (1 km 격자 합산)`, Number(ysel) > 2025 ? "전망" : "자료로 추정", "est");
+    else row("인구", `World Bank WDI ${ysel || p.population_year || ""}${(pop.fallback ? " (일부 지역 Natural Earth 추정 인구)" : "")}`, "실제 관측", "obs");
+    const clim = $("#p-clim").value;
+    row("기후", clim ? `ERA5 ${clim.replace("era5_", "").replace("_", " ~ ")} 월 평균 (기온·습도)` : "미확보", clim ? "재분석 (자료로 추정)" : "", "mod");
+    row("기후 효과 g", $("#f-climate").value === "none" ? "쓰지 않음 (g = 1)" : "사용자 가정 계수", $("#f-climate").value === "none" ? "기본 가정값" : "사용자 입력", $("#f-climate").value === "none" ? "asm" : "user");
+    row("항공 노선", "OpenFlights 노선 구조 (2014-06 기준)", "실제 관측", "obs");
+    row("이동 규모", `항공 ${fmt(a.air_trips_per_day)}회/일 · 통근 ${a.commute_fraction} · 접촉 ${a.destination_contact_share}`, "기본 가정값", "asm");
   }
-  await drawSeedMap(name, token);
+  const nUser = [...BASIC, ...ADV].filter(([k]) => dzValue(k) !== null).length;
+  row("감염병 값", nUser ? `${nUser}개 사용자 입력, 나머지 COVID 유사 기본값` : "COVID 유사 코드 검증용 기본값", nUser ? "사용자 입력" : "기본 가정값", nUser ? "user" : "asm");
+  const nu = Object.keys(uncertaintyRequest() || {}).length;
+  if (nu) row("불확실성", `${nu}개 매개변수 범위`, "사용자 가정", "user");
 }
-async function drawSeedMap(name, token) {
-  const box = $("#seed-map");
-  if (name === "synthetic_single") { if (seedMap) { seedMap.remove(); seedMap = null; seedLayer = null; } box.innerHTML = "<p class='note' style='padding:8px'>합성 지역은 지도가 없다.</p>"; return; }
-  let geo; try { geo = await api(`/api/datasets/${name}/geojson`); } catch (_) { box.textContent = "경계 없음"; return; }
-  if (token !== undefined && token !== dsToken) return;
-  if (!seedMap) { box.innerHTML = ""; seedMap = L.map(box, { attributionControl: false, zoomSnap: 0.25 }); }
-  if (seedLayer) seedLayer.remove();
-  const seeded = () => new Set($$("#f-seeds .row select").map((s) => s.value));
-  const style = (f) => ({ color: css("--surface"), weight: 1, fillOpacity: 0.85, fillColor: seeded().has(f.id) ? css("--series-2") : css("--ramp-1") });
-  seedLayer = L.geoJSON(geo, { style, onEachFeature: (f, layer) => {
-    layer.bindTooltip(() => `${esc(f.properties.name)} (${esc(f.id)})<br>인구 ${esc(fmt(f.properties.population))}<br>누르면 발생 지역에 추가`, { sticky: true });
-    layer.on("click", () => { if (!seeded().has(f.id)) addSeed(f.id, 10, 0); });
-  } }).addTo(seedMap);
-  seedMapFit = () => { if (box.clientWidth > 0) { seedMap.invalidateSize(); try { seedMap.fitBounds(seedLayer.getBounds(), { padding: [4, 4] }); } catch (_) { /* 빈 경계 */ } } };
-  window.__restyleSeeds = () => seedLayer && seedLayer.setStyle(style);
-  seedMapFit();
+
+// ---- 매개변수 불확실성
+const UNC = [["R0", "R0", 0.1], ["incubation_days", "잠복기 (일)", 0.1], ["infectious_days", "감염 기간 (일)", 0.1], ["immunity_days", "면역 유지 기간 (일)", 1], ["f1", "첫 감염 치명률", 0.001]];
+function initUncertainty() {
+  const box = $("#unc-rows");
+  for (const [k, lab, step] of UNC) {
+    const on = el("input", { type: "checkbox", "data-unc": k, "aria-label": `${lab} 범위 사용` });
+    const lo = el("input", { type: "number", step, "data-lo": k, "aria-label": `${lab} 하한`, disabled: true });
+    const hi = el("input", { type: "number", step, "data-hi": k, "aria-label": `${lab} 상한`, disabled: true });
+    on.addEventListener("change", () => {
+      lo.disabled = hi.disabled = !on.checked;
+      if (on.checked && lo.value === "") {           // 현재 값 ±20% 를 시작값으로 채운다 (사용자가 고친다)
+        const cur = k === "R0" ? +$("[name=R0]").value : dzEffective(k);
+        if (cur > 0) { lo.value = +(cur * 0.8).toPrecision(3); hi.value = +(cur * 1.2).toPrecision(3); }
+      }
+      renderInputSources();
+    });
+    box.append(el("div", { class: "unc-row" }, el("label", { class: "inline" }, on, lab), el("label", {}, "하한", lo), el("label", {}, "상한", hi)));
+  }
 }
+function uncertaintyRequest() {
+  const out = {};
+  for (const [k] of UNC) { const on = $(`[data-unc=${k}]`); if (on && on.checked) out[k] = [+$(`[data-lo=${k}]`).value, +$(`[data-hi=${k}]`).value]; }
+  return Object.keys(out).length ? out : null;
+}
+function setUncertainty(u) {
+  for (const [k] of UNC) { const on = $(`[data-unc=${k}]`), r = u && u[k];
+    on.checked = !!r; $(`[data-lo=${k}]`).disabled = $(`[data-hi=${k}]`).disabled = !r;
+    $(`[data-lo=${k}]`).value = r ? r[0] : ""; $(`[data-hi=${k}]`).value = r ? r[1] : ""; }
+}
+
 function regionSelect(value, multiple) {
   const s = el("select", multiple ? { multiple: true, size: 3 } : {});
   if (multiple) s.append(el("option", { value: "", selected: !value }, "전체 지역"));
   regionInfo.ids.forEach((id, i) => s.append(el("option", { value: id, selected: multiple ? (value || []).includes(id) : id === value }, `${id} ${regionInfo.names[i] || ""}`)));
   return s;
 }
+function seedSelect(region) { const s = regionSelect(region); s.addEventListener("change", wsRestyleSeeds); return s; }
 function addSeed(region, count = 10, exposed = 0) {
-  const sel = regionSelect(region);
-  sel.addEventListener("change", () => window.__restyleSeeds && window.__restyleSeeds());
   const row = el("div", { class: "row" },
-    el("label", {}, "지역", sel), el("label", {}, "I (감염 중)", el("input", { type: "number", value: count, min: 0 })),
+    el("label", {}, "지역", seedSelect(region)), el("label", {}, "I (감염 중)", el("input", { type: "number", value: count, min: 0 })),
     el("label", {}, "E (잠복)", el("input", { type: "number", value: exposed, min: 0 })),
-    el("button", { type: "button", class: "secondary", onclick: () => { row.remove(); window.__restyleSeeds && window.__restyleSeeds(); } }, "삭제"));
+    el("button", { type: "button", class: "secondary", onclick: () => { row.remove(); wsRestyleSeeds(); } }, "삭제"));
   $("#f-seeds").append(row);
-  window.__restyleSeeds && window.__restyleSeeds();
+  wsRestyleSeeds();
 }
 function addInt(start = 30, end = 90, value = 0.3, regions = null) {
   const row = el("div", { class: "row" },
@@ -346,7 +452,9 @@ function formRequest() {
       const ins = $$("input", r); const regs = Array.from($("select", r).selectedOptions).map((o) => o.value).filter((x) => x);
       return { start: +ins[0].value, end: +ins[1].value, value: +ins[2].value, regions: regs.length ? regs : null };
     }),
+    ...periodRequest(),
   };
+  const u = uncertaintyRequest(); if (u) req.uncertainty = u;
   if (req.dataset === "synthetic_single") req.population = +v("population");
   if (req.r0_reference === "region") req.reference_region = v("reference_region");
   return req;
@@ -354,7 +462,9 @@ function formRequest() {
 async function fillForm(req) {
   const f = $("#scenario-form");
   if ([...$("#f-dataset").options].some((o) => o.value === req.dataset)) $("#f-dataset").value = req.dataset;
-  await onDataset(true);
+  await loadPeriods(req.dataset);
+  setPeriodSelects({ boundaries: req.boundary_date, population: req.population_year, climate: req.climate_period });
+  await onDataset(true, true);
   $("#f-seeds").innerHTML = ""; $("#f-ints").innerHTML = "";
   const set = (n, val) => { if (val !== undefined && val !== null && f.elements[n]) f.elements[n].value = val; };
   set("title", req.title); set("population", req.population); set("start_date", req.start_date); set("days", req.days);
@@ -366,11 +476,12 @@ async function fillForm(req) {
   f.elements.use_mobility.checked = req.use_mobility !== false; f.elements.use_commuting.checked = req.use_commuting !== false;
   $("[name=R0]").value = req.R0 ?? 2.5;
   setDisease(req.disease || null);
+  setUncertainty(req.uncertainty || null);
   $("#f-refreg-wrap").hidden = req.r0_reference !== "region"; if (req.reference_region) $("#f-refreg").value = req.reference_region;
   $("#f-climate-params").hidden = (req.climate || "none") === "none";
   for (const s of req.seeds || []) addSeed(s.region, s.count, s.exposed || 0);
   for (const i of req.interventions || []) addInt(i.start, i.end, i.value, i.regions);
-  derived();
+  derived(); renderInputSources();
 }
 // 파일 이름은 ASCII 로 (일부 브라우저가 한글 download 이름을 무시한다). 제목은 파일 안에 그대로 있다.
 $("#save-cfg").addEventListener("click", () => download(`scenario_settings_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "")}.json`, JSON.stringify(formRequest(), null, 1), "application/json"));
@@ -378,6 +489,7 @@ $("#load-cfg").addEventListener("change", (e) => { const file = e.target.files[0
   r.onload = async () => { try { await fillForm(JSON.parse(r.result)); msg("설정을 불러왔다. 점검 후 실행한다."); } catch (err) { msg("설정 파일을 읽지 못했다: " + err.message, true); } }; r.readAsText(file); });
 const COST = { ok: "짧음", warn: "수 분 이상", heavy: "매우 오래 걸릴 수 있음 (반복 수·기간·방법을 줄이는 것을 권장)" };
 $("#check-btn").addEventListener("click", async () => {
+  msg("점검 중…");
   try { const r = await api("/api/scenarios/check", { method: "POST", body: JSON.stringify(formRequest()) });
     msg(`점검 통과. 예상 계산 시간 약 ${fmt(r.estimate.seconds, 0)}초 (${COST[r.estimate.level]}; ${r.estimate.note}).`, r.estimate.level === "heavy"); }
   catch (err) { msg("입력 오류: " + err.message, true); }
@@ -385,25 +497,206 @@ $("#check-btn").addEventListener("click", async () => {
 $("#scenario-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const req = formRequest();
+  msg("점검 중…");
   let res;
   try { res = await api("/api/scenarios", { method: "POST", body: JSON.stringify(req) }); }
   catch (err) { msg("입력 오류: " + err.message, true); return; }
-  msg(`실행을 시작했다. 예상 약 ${fmt(res.estimate.seconds, 0)}초 (${COST[res.estimate.level]}).`, res.estimate.level === "heavy");
-  trackJob(res.job_id, req.title, (s) => { if (s.state === "done") { loaded.results = false; showTab("results"); viewJob(res.job_id); } });
+  msg(`실행을 시작했다. 예상 약 ${fmt(res.estimate.seconds, 0)}초 (${COST[res.estimate.level]}). 지도와 왼쪽 수치가 계산 중에 바뀐다.`, res.estimate.level === "heavy");
+  loaded.results = false;
+  wsTrack(res.job_id, req);
 });
-let pollTimer = null;
-function trackJob(id, title, onEnd) {
-  $("#run-progress").hidden = false; $("#rp-title").textContent = title; $("#rp-bar").style.width = "0";
+const stateLabel = (s) => ({ queued: "대기", running: "실행 중", done: "완료", failed: "실패", cancelled: "취소됨", interrupted: "중단됨" })[s] || s;
+
+// ------------------------------------------------------------------ 작업 공간 지도 (가운데) · 수치 (왼쪽)
+const WS = { map: null, layer: null, geo: null, idx: {}, data: null, frame: 0, timer: null, mode: "seed", job: null, seq: 0, req: null, start: null, bins: null, poll: null };
+function wsSeeded() { return new Set($$("#f-seeds .row select").map((s) => s.value)); }
+function wsRestyleSeeds() { if (WS.layer && WS.mode === "seed") WS.layer.setStyle(wsStyle); }
+function wsSetMode(m) {
+  WS.mode = m;
+  $("#mode-seed").setAttribute("aria-pressed", String(m === "seed")); $("#mode-result").setAttribute("aria-pressed", String(m === "result"));
+  $("#ws-note").textContent = m === "seed" ? "지도를 눌러 발생 지역을 고른다 (주황 = 고른 지역)." : "지역을 누르면 왼쪽에 그 지역 수치가 나온다. 색은 감염자 수 (로그 간격).";
+  if (WS.layer) WS.layer.setStyle(wsStyle);
+  wsLegend();
+}
+$("#mode-seed").addEventListener("click", () => wsSetMode("seed"));
+$("#mode-result").addEventListener("click", () => { if (WS.data) wsSetMode("result"); });
+async function wsLoadGeo(name, token) {
+  const box = $("#ws-map");
+  if (name === "synthetic_single") { if (WS.map) { WS.map.remove(); WS.map = null; WS.layer = null; } WS.geo = null; box.innerHTML = "<p class='note' style='padding:12px'>합성 단일 지역은 지도가 없다. 왼쪽 수치와 추이 그래프로 본다.</p>"; return; }
+  let geo; try { geo = await api(`/api/datasets/${name}/geojson${periodQuery()}`); } catch (e) { box.textContent = "경계 없음: " + e.message; return; }
+  if (token !== undefined && token !== dsToken) return;
+  WS.geo = geo; WS.idx = {};
+  if (!WS.map) { box.innerHTML = ""; WS.map = L.map(box, { attributionControl: true, zoomSnap: 0.25 }); WS.map.attributionControl.setPrefix(false); }
+  if (WS.attr) WS.map.attributionControl.removeAttribution(WS.attr);       // 데이터셋을 바꾸면 이전 출처 문구를 지운다
+  WS.attr = String(geo.properties?.boundaries || "").startsWith("KOSTAT") ? "경계: 통계청 SGIS (공공누리 1유형), admdongkor" : "경계: Natural Earth";
+  WS.map.attributionControl.addAttribution(WS.attr);
+  if (WS.layer) WS.layer.remove();
+  WS.layer = L.geoJSON(geo, { style: wsStyle, onEachFeature: (f, layer) => {
+    layer.bindTooltip(() => wsTooltip(f), { sticky: true });
+    layer.on("click", () => { if (WS.mode === "seed") { if (!wsSeeded().has(f.id)) addSeed(f.id, 10, 0); } else wsRegion(f.id); });
+  } }).addTo(WS.map);
+  wsFit(); setTimeout(wsFit, 60);
+}
+function wsFit() { const box = $("#ws-map"); if (WS.map && WS.layer && box.clientWidth > 0 && box.clientHeight > 0) { WS.map.invalidateSize(); try { WS.map.fitBounds(WS.layer.getBounds(), { padding: [6, 6] }); } catch (_) { /* 빈 경계 */ } } }
+function wsValue(i, k) {
+  const L_ = $("#ws-layer").value, v = WS.data[L_][i][k];
+  if (v === null || v === undefined) return null;
+  return $("#ws-scale").value === "per100k" ? (v / Math.max(WS.data.population[k], 1)) * 1e5 : v;
+}
+function wsComputeBins() {
+  let mx = 0;
+  if (WS.data) for (let i = 0; i < WS.data.t_frames.length; i++) for (let k = 0; k < WS.data.ids.length; k++) { const v = wsValue(i, k); if (v !== null && v > mx) mx = v; }
+  const b = []; if (mx > 0) for (let i = 7; i >= 1; i--) b.push(mx / 2 ** (i * 1.2));
+  WS.bins = { mx, b };
+}
+function wsStyle(f) {
+  if (WS.mode === "seed" || !WS.data) {
+    const s = wsSeeded().has(f.id);
+    return { color: css("--surface"), weight: 1, fillOpacity: 0.85, fillColor: s ? css("--series-2") : css("--ramp-1") };
+  }
+  const k = WS.dataIdx[f.id];
+  const v = k === undefined ? null : wsValue(WS.frame, k);
+  let col = css("--nodata");
+  if (v !== null && isFinite(v)) { if (v <= 0) col = css("--surface-2"); else { let j = 0; while (j < WS.bins.b.length && v > WS.bins.b[j]) j++; col = css(RAMP[Math.max(0, Math.min(j, 7))]); } }
+  const sel = WS.region === f.id;
+  return { color: sel ? css("--ink") : css("--surface"), weight: sel ? 2.5 : 1, fillOpacity: 0.92, fillColor: col };
+}
+function wsTooltip(f) {
+  const pop = f.properties.population;
+  let t = `${esc(f.properties.name)} (${esc(f.id)})<br>인구 ${esc(fmt(pop))}`;
+  if (WS.mode === "seed" || !WS.data) return t + "<br>누르면 발생 지역에 추가";
+  const k = WS.dataIdx[f.id]; if (k === undefined) return t;
+  const I = WS.data.I[WS.frame][k], E = WS.data.E[WS.frame][k], D = WS.data.D[WS.frame][k];
+  return t + `<br>감염 중 I ${esc(fmt(I))} (10만 명당 ${esc(fmt(I / Math.max(WS.data.population[k], 1) * 1e5))})<br>잠복 E ${esc(fmt(E))} · 누적 사망 ${esc(fmt(D))}`;
+}
+function wsLegend() {
+  const lg = $("#ws-legend"); lg.innerHTML = "";
+  if (WS.mode === "seed" || !WS.data) { lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--series-2")}` }), " 발생 지역"), el("span", {}, el("span", { class: "sw", style: `background:${css("--ramp-1")}` }), " 다른 지역")); return; }
+  const unit = $("#ws-scale").value === "per100k" ? "10만 명당" : "명";
+  lg.append(`${$("#ws-layer").selectedOptions[0].text} (${unit}): `);
+  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--surface-2")};border:1px solid var(--border)` }), " 0"));
+  const edges = [0, ...WS.bins.b];
+  for (let j = 0; j < 8 && j < edges.length; j++) { const hi = j + 1 < edges.length ? edges[j + 1] : WS.bins.mx;
+    lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css(RAMP[j])}` }), ` ≤${fmt(hi)}`)); }
+}
+function wsSetData(live, autoplay) {
+  const first = !WS.data;
+  WS.data = live; WS.dataIdx = {}; live.ids.forEach((id, k) => (WS.dataIdx[id] = k));
+  wsComputeBins();
+  const sl = $("#ws-slider"); sl.disabled = false; sl.max = live.t_frames.length - 1;
+  $("#ws-play").disabled = false; $("#mode-result").disabled = false;
+  if (first) { wsSetMode("result"); WS.frame = 0; if (autoplay) wsPlay(true); }
+  WS.frame = Math.min(WS.frame, live.t_frames.length - 1);
+  const badge = $("#lv-badge");
+  badge.textContent = { ode_preview: "ODE 미리보기", ensemble: `확률 실행 ${live.runs_done}/${live.n_runs} 평균`, final: live.n_runs > 1 ? `최종 (${live.n_runs}회 평균)` : "최종 결과" }[live.kind] || live.kind;
+  badge.className = "tag " + (live.kind === "final" ? "sim" : "asm");
+  $("#lv-note").innerHTML = "";
+  $("#lv-note").append(live.kind === "ode_preview" ? "지금은 결정론 ODE 미리보기다 (확률 실행 결과 아님). 확률 실행이 끝나는 대로 평균으로 바뀐다. " : "",
+    "값은 모형 안의 실제 감염 상태다 (관측 확진자 수가 아님). ", el("span", { class: "tag sim" }, "시뮬레이션 결과"),
+    live.labels && live.labels.uncertainty ? " 매개변수 불확실성(사용자 범위)이 들어간 실행들의 평균이다." : "");
+  wsLegend(); wsFrame(WS.frame);
+}
+function wsFrame(i) {
+  if (!WS.data) return;
+  WS.frame = i; $("#ws-slider").value = i;
+  if (WS.layer) WS.layer.setStyle(wsStyle);
+  const d = WS.data, t = d.t_frames[i];
+  const day = Math.round(t), dd = d.daily;
+  const di = Math.min(dd.t.length - 1, Math.max(0, day));
+  const date = WS.start ? new Date(WS.start.getTime() + day * 864e5).toISOString().slice(0, 10) : "";
+  $("#ws-time").textContent = `시작 후 ${day}일${date ? " · " + date : ""}`;
+  const N = d.population_total, S = dd.S[di], E = dd.E[di], I = dd.I[di], D = dd.D[di], Rr = N - S - E - I - D;
+  const S0 = dd.S[0], cum = S0 - S, newToday = di > 0 ? dd.S[di - 1] - S : 0;
+  let reached = 0; for (let k = 0; k < d.ids.length; k++) if ((d.I[i][k] || 0) + (d.E[i][k] || 0) >= 1) reached++;
+  $("#lv-day").innerHTML = "";
+  $("#lv-day").append(el("strong", {}, `${day}일째`), date ? `${date} (시작 ${WS.req.start_date})` : "");
+  const tiles = $("#lv-tiles"); tiles.innerHTML = "";
+  const tile = (k, v, sub) => tiles.append(el("div", { class: "tile" }, el("div", { class: "k" }, k), el("div", { class: "v" }, v), sub ? el("div", { class: "d" }, sub) : ""));
+  tile("감염 중 I", fmt(I), `인구의 ${pct(I / N)}`);
+  tile("잠복 E", fmt(E));
+  tile("오늘 신규 첫 감염", fmt(Math.max(0, newToday)));
+  tile("누적 첫 감염", fmt(cum), pct(cum / N));
+  tile("누적 사망 D", fmt(D));
+  tile("감염 지역", `${reached} / ${d.ids.length}`, "I + E ≥ 1");
+  tile("회복·면역 R", fmt(Rr));
+  tile("감수성 S", fmt(S));
+  wsSpark(di);
+  const per = d.ids.map((id, k) => ({ id, v: (d.I[i][k] || 0) / Math.max(d.population[k], 1) * 1e5, n: d.I[i][k] || 0 })).filter((x) => x.n >= 1).sort((a, b) => b.v - a.v).slice(0, 5);
+  const top = $("#lv-top"); top.innerHTML = "";
+  const nameOf = (id) => (WS.geo ? (WS.geo.features.find((f) => f.id === id) || { properties: {} }).properties.name : "") || id;
+  if (!per.length) top.append(el("li", { class: "muted" }, el("span", {}, "아직 없음")));
+  for (const x of per) top.append(el("li", { onclick: () => wsRegion(x.id), style: "cursor:pointer" }, el("span", {}, nameOf(x.id)), el("span", {}, fmt(x.v))));
+  if (WS.region) wsRegionInfo();
+}
+function wsSpark(di) {
+  const box = $("#lv-spark"), dd = WS.data.daily, vals = dd.I, n = vals.length;
+  const W = 240, H = 70, mx = Math.max(1, ...vals.filter((v) => v !== null));
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "전체 감염 중 인원 추이와 현재 시점");
+  const X = (j) => (j / Math.max(1, n - 1)) * (W - 4) + 2, Y = (v) => H - 4 - (v / mx) * (H - 12);
+  const path = document.createElementNS(NS, "path");
+  path.setAttribute("d", vals.map((v, j) => `${j ? "L" : "M"}${X(j)},${Y(v || 0)}`).join(""));
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", css("--series-1")); path.setAttribute("stroke-width", 1.8);
+  const cur = document.createElementNS(NS, "line");
+  for (const [a, b] of [["x1", X(di)], ["x2", X(di)], ["y1", 2], ["y2", H - 2]]) cur.setAttribute(a, b);
+  cur.setAttribute("stroke", css("--series-2")); cur.setAttribute("stroke-width", 1.5);
+  const lab = document.createElementNS(NS, "text"); lab.setAttribute("x", 4); lab.setAttribute("y", 10); lab.setAttribute("font-size", 10); lab.setAttribute("fill", css("--ink-2"));
+  lab.textContent = `전체 감염 중 I (최대 ${fmt(mx)})`;
+  svg.append(path, cur, lab); box.innerHTML = ""; box.append(svg);
+}
+function wsRegion(id) { WS.region = id; if (WS.layer) WS.layer.setStyle(wsStyle); wsRegionInfo(); }
+function wsRegionInfo() {
+  const k = WS.dataIdx[WS.region]; if (k === undefined || !WS.data) return;
+  const d = WS.data, i = WS.frame, f = WS.geo && WS.geo.features.find((x) => x.id === WS.region);
+  let box = $("#lv-region"); if (!box) { box = el("div", { id: "lv-region", class: "card small", style: "margin-top:8px" }); $("#lv-top").after(box); }
+  box.innerHTML = "";
+  box.append(el("strong", {}, `${f ? f.properties.name : WS.region} (${WS.region})`),
+    el("div", {}, `인구 ${fmt(d.population[k])} · 감염 중 ${fmt(d.I[i][k])} (10만 명당 ${fmt(d.I[i][k] / Math.max(d.population[k], 1) * 1e5)})`),
+    el("div", {}, `잠복 ${fmt(d.E[i][k])} · 누적 사망 ${fmt(d.D[i][k])}`),
+    el("button", { type: "button", class: "secondary", onclick: () => { WS.region = null; box.remove(); if (WS.layer) WS.layer.setStyle(wsStyle); } }, "닫기"));
+}
+function wsPlay(on) {
+  clearInterval(WS.timer); WS.timer = null;
+  if (on === false || (on === undefined && $("#ws-play").textContent === "멈춤")) { $("#ws-play").textContent = "재생"; return; }
+  $("#ws-play").textContent = "멈춤";
+  WS.timer = setInterval(() => {
+    if (!WS.data) return;
+    let i = WS.frame + 1;
+    if (i >= WS.data.t_frames.length) { if (WS.data.kind === "final") { wsPlay(false); return; } i = 0; }
+    wsFrame(i);
+  }, +$("#ws-speed").value);
+}
+$("#ws-play").addEventListener("click", () => wsPlay());
+$("#ws-speed").addEventListener("change", () => { if (WS.timer) wsPlay(true); });
+$("#ws-slider").addEventListener("input", () => wsFrame(+$("#ws-slider").value));
+for (const id of ["#ws-layer", "#ws-scale"]) $(id).addEventListener("change", () => { if (WS.data) { wsComputeBins(); wsLegend(); wsFrame(WS.frame); } });
+function wsTrack(id, req) {
+  WS.job = id; WS.seq = 0; WS.data = null; WS.req = req; WS.region = null; WS.start = req.start_date ? new Date(req.start_date + "T00:00:00Z") : null;
+  $("#lv-region")?.remove();
+  wsPlay(false);
+  $("#run-progress").hidden = false; $("#rp-title").textContent = req.title; $("#rp-bar").style.width = "0"; $("#rp-detail").hidden = true; $("#rp-cancel").hidden = false;
+  $("#lv-badge").textContent = "준비 중"; $("#lv-badge").className = "tag asm";
   $("#rp-cancel").onclick = () => api(`/api/jobs/${id}`, { method: "DELETE" }).catch(() => {});
-  clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    let s; try { s = await api(`/api/jobs/${id}`); } catch (_) { return; }
+  $("#rp-detail").onclick = () => viewJob(id);
+  clearInterval(WS.poll);
+  let failures = 0;
+  WS.poll = setInterval(async () => {
+    let s; try { s = await api(`/api/jobs/${id}`); failures = 0; }
+    catch (e) { if (++failures >= 4) $("#rp-state").textContent = "서버 응답 없음: " + e.message + " (다시 시도 중)"; return; }
     $("#rp-bar").style.width = `${Math.round(100 * (s.progress || 0))}%`;
     $("#rp-state").textContent = `${stateLabel(s.state)} ${s.message || ""}`;
-    if (["done", "failed", "cancelled", "interrupted"].includes(s.state)) { clearInterval(pollTimer); onEnd && onEnd(s); }
+    if ((s.live_seq || 0) > WS.seq) {
+      const seq = s.live_seq;
+      try { const live = await api(`/api/jobs/${id}/live`); if (WS.job === id) { WS.seq = seq; wsSetData(live, true); } } catch (_) { /* 다음 확인에서 */ }
+    }
+    if (["done", "failed", "cancelled", "interrupted"].includes(s.state)) {
+      clearInterval(WS.poll);
+      $("#rp-cancel").hidden = true;
+      if (s.state === "done") { $("#rp-detail").hidden = false; $("#rp-bar").style.width = "100%"; msg("완료. 재생 막대로 시점을 옮기거나 '상세 결과·내보내기' 로 그래프·표·파일을 본다."); }
+      else msg(`${stateLabel(s.state)}: ${s.message || ""}`, s.state === "failed");
+    }
   }, 800);
 }
-const stateLabel = (s) => ({ queued: "대기", running: "실행 중", done: "완료", failed: "실패", cancelled: "취소됨", interrupted: "중단됨" })[s] || s;
 
 // ------------------------------------------------------------------ 홈
 async function loadHome() {
@@ -420,14 +713,21 @@ async function loadHome() {
 async function loadJobs() {
   const tb = $("#jobs-table tbody"); tb.innerHTML = "";
   let list = [];
-  try { list = await api("/api/jobs"); } catch (e) { tb.append(el("tr", {}, el("td", { colspan: 5, class: "err" }, e.message))); return; }
-  if (!list.length) tb.append(el("tr", {}, el("td", { colspan: 5, class: "muted" }, "저장된 작업이 없다.")));
+  try { list = await api("/api/jobs"); } catch (e) { tb.append(el("tr", {}, el("td", { colspan: 6, class: "err" }, e.message))); return; }
+  if (!list.length) tb.append(el("tr", {}, el("td", { colspan: 6, class: "muted" }, "저장된 작업이 없다.")));
   for (const j of list) {
     const kindLabel = { scenario: "시나리오", forecast: "최신 예측", dataset: "데이터 갱신", update: "원자료 갱신" }[j.kind] || j.kind;
     const cb = j.kind === "scenario" && j.state === "done" ? el("input", { type: "checkbox", value: j.id, "aria-label": "비교 선택" }) : "";
+    const busy = ["queued", "running"].includes(j.state);
+    const ren = el("button", { type: "button", class: "secondary", "aria-label": `${j.title || ""} 이름 바꾸기`, onclick: async () => {
+      const t = prompt("새 제목 (1~80자)", j.title || ""); if (t === null) return;
+      try { await api(`/api/jobs/${j.id}/rename`, { method: "POST", body: JSON.stringify({ title: t }) }); loadJobs(); } catch (e) { alert(e.message); } } }, "이름");
+    const del = el("button", { type: "button", class: "secondary", disabled: busy, "aria-label": `${j.title || ""} 삭제`, onclick: async () => {
+      if (!confirm(`'${j.title || j.id.slice(0, 8)}' 결과 폴더를 지운다. 되돌릴 수 없다. 계속할까?`)) return;
+      try { await api(`/api/jobs/${j.id}/files`, { method: "DELETE" }); loadJobs(); } catch (e) { alert(e.message); } } }, "삭제");
     tb.append(el("tr", {}, el("td", {}, cb), el("td", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); openJob(j); } }, j.title || j.id.slice(0, 8))),
       el("td", {}, kindLabel), el("td", { title: j.message || "" }, stateLabel(j.state) + (j.state === "running" ? ` ${Math.round(100 * (j.progress || 0))}%` : "") + (j.state === "failed" ? ` (${j.message || ""})` : "")),
-      el("td", { class: "small muted" }, (j.created_utc || "").replace("T", " ").replace("+00:00", ""))));
+      el("td", { class: "small muted" }, (j.created_utc || "").replace("T", " ").replace("+00:00", "")), el("td", { class: "flex" }, ren, del)));
   }
 }
 $("#refresh-jobs").addEventListener("click", loadJobs);
@@ -483,6 +783,8 @@ async function viewJob(id) {
   R = { id, s, geo: null, names: {}, frame: 0, region: null };
   $("#rv-title").textContent = `${s.title} · ${s.method} · ${s.n_runs}회 · ${s.request.dataset}`;
   $("#rv-reuse").onclick = async () => { showTab("run"); await fillForm(s.request); msg("이 결과의 설정을 불러왔다. 바꿀 값만 고친 뒤 실행하면 비교하기 쉽다."); };
+  $("#rv-ws").onclick = async () => { showTab("run"); try { const live = await api(`/api/jobs/${id}/live`); WS.job = id; WS.req = s.request; WS.data = null; WS.start = new Date(s.request.start_date + "T00:00:00Z");
+    if ($("#f-dataset").value !== s.request.dataset) { await fillForm(s.request); } wsSetData(live, true); } catch (e) { msg("이 결과에는 지도 재생 자료가 없다 (이전 판 결과): " + e.message, true); } };
   const w = $("#rv-warnings"); w.innerHTML = "";
   w.append(el("div", { class: "warn" }, el("span", { class: "tag sim" }, "시뮬레이션 결과"), ` 가정에 따른 결과이며 예측이 아니다. 감염병 값: ${s.labels.disease_values}. 환경: ${s.labels.environment}.`));
   for (const x of s.warnings) w.append(el("div", { class: "warn" }, x));
@@ -882,4 +1184,4 @@ async function loadSources() {
 
 loadHome(); loaded.home = true;
 initForm();
-window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(rerender, 200); });
+window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(() => { rerender(); wsFit(); }, 200); });

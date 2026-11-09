@@ -183,8 +183,9 @@ class EnsembleCancelled(Exception):
 
 def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = None,
                  n_workers: int | None = None, outbreak_threshold: float = 1000.0,
-                 progress=None, cancel=None) -> EnsembleResult:
-    """progress(done, total): 실행 하나가 끝날 때마다 부른다. cancel(): 참이면 남은 실행을 멈추고 EnsembleCancelled."""
+                 progress=None, cancel=None, on_run=None) -> EnsembleResult:
+    """progress(done, total): 실행 하나가 끝날 때마다 부른다. cancel(): 참이면 남은 실행을 멈추고 EnsembleCancelled.
+    on_run(r, out): 실행 r 이 끝나면 그 결과 [4, T, K] (S, E, I, D) 를 넘긴다 (화면의 실시간 갱신용)."""
     import warnings
     sim = cfg.simulation
     method = method or sim.method
@@ -205,6 +206,8 @@ def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = No
                     raise EnsembleCancelled(f"{r}/{R} 실행 후 취소")
                 out, meta = _simulate(sc, method, c)
                 runs[r], metas[r] = out, meta
+                if on_run is not None:
+                    on_run(r, runs[r])
                 if progress is not None:
                     progress(r + 1, R)
     else:
@@ -217,6 +220,8 @@ def run_ensemble(cfg: Config, method: str | None = None, n_runs: int | None = No
             for r, out, meta in ex.map(_work, [(r, method, c) for r, c in enumerate(children)], chunksize=1):
                 runs[r], metas[r] = out, meta
                 done += 1
+                if on_run is not None:
+                    on_run(r, runs[r])
                 if progress is not None:
                     progress(done, R)
                 if cancel is not None and cancel():

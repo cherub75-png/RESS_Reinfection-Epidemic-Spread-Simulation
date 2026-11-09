@@ -18,8 +18,8 @@
 </header>
 <nav role="tablist" id="tabs">
   <button role="tab" data-tab="home" aria-selected="true">홈</button>
-  <button role="tab" data-tab="run">새 시뮬레이션</button>
-  <button role="tab" data-tab="results">결과·비교</button>
+  <button role="tab" data-tab="run">시뮬레이션</button>
+  <button role="tab" data-tab="results">저장된 결과·비교</button>
   <button role="tab" data-tab="validation">예측 검증</button>
   <button role="tab" data-tab="latest">최신 자료 예측</button>
   <button role="tab" data-tab="data">데이터 관리</button>
@@ -54,104 +54,146 @@
     <h3>최근 작업</h3><div class="tablewrap"><table id="home-jobs"></table></div>
   </section>
 
-  <!-- 새 시뮬레이션 -->
+  <!-- 시뮬레이션 작업 공간: 왼쪽 수치 · 가운데 지도 · 오른쪽 입력 -->
   <section id="tab-run" hidden>
-    <h2>새 시뮬레이션 <span class="tag sim">시나리오 = 가정에 따른 결과</span></h2>
-    <form id="scenario-form" autocomplete="off" novalidate>
-      <fieldset><legend>1. 기본</legend>
-        <label>제목 <input name="title" value="시나리오" maxlength="80"></label>
-        <label>지역 데이터셋 (공간 해상도) <select name="dataset" id="f-dataset"></select></label>
-        <label id="f-pop-wrap" hidden>인구 (합성 단일 지역) <input type="number" name="population" value="1000000" min="1"></label>
-        <label>시작일 <input type="date" name="start_date" value="2020-01-20"></label>
-        <label>기간 (일) <input type="number" name="days" value="180" min="1" max="1095"></label>
-        <div class="note" id="f-dataset-note"></div>
-      </fieldset>
+    <div class="ws">
+      <aside class="ws-left" aria-labelledby="lv-h">
+        <div class="flex"><h2 id="lv-h" class="mt0">현재 수치</h2><span id="lv-badge" class="tag" role="status">대기</span></div>
+        <div id="lv-day" class="lv-day">오른쪽에서 조건을 정하고 실행하면, 지도와 함께 시점별 수치가 여기서 바뀐다.</div>
+        <div class="lv-tiles" id="lv-tiles"></div>
+        <div class="lv-spark" id="lv-spark"></div>
+        <h3>감염이 많은 지역 <span class="muted small">(10만 명당)</span></h3>
+        <ol id="lv-top" class="lv-top"></ol>
+        <p class="note" id="lv-note">값은 모형 안의 실제 감염 상태다 (관측 확진자 수가 아님). <span class="tag sim">시뮬레이션 결과</span></p>
+      </aside>
 
-      <fieldset><legend>2. 감염병 특성</legend>
-        <div class="flex">
-          <label>저장된 설정 <select id="dz-presets"><option value="">(기본 가정값: COVID 유사)</option></select></label>
-          <button type="button" class="secondary" id="dz-load">불러오기</button>
-          <button type="button" class="secondary" id="dz-save">현재 설정 저장</button>
-          <button type="button" class="secondary" id="dz-del">삭제</button>
+      <div class="ws-center">
+        <div class="ws-tools">
+          <span class="seg" role="group" aria-label="지도 모드">
+            <button type="button" class="secondary" id="mode-seed" aria-pressed="true">발생 지역 고르기</button>
+            <button type="button" class="secondary" id="mode-result" aria-pressed="false" disabled>결과 보기</button></span>
+          <label class="inline small">값 <select id="ws-layer">
+            <option value="I">감염 중 I</option><option value="E">잠복 E</option><option value="D">누적 사망 D</option></select></label>
+          <label class="inline small">단위 <select id="ws-scale"><option value="per100k">10만 명당</option><option value="abs">절대 인원</option></select></label>
         </div>
-        <label>감염병 이름 <input name="dz_name" value="사용자 정의" maxlength="60"></label>
-        <label>유형 <select name="dz_kind"><option value="respiratory">호흡기 전파</option><option value="contact">접촉 전파</option>
-          <option value="vector">매개체 전파</option><option value="other">기타</option></select></label>
-        <div class="params" id="dz-basic"></div>
-        <details><summary>고급 매개변수 (재감염·전파력·치명률 구조)</summary><div class="params" id="dz-adv"></div></details>
-        <p class="note" id="dz-derived"></p>
-        <p class="note">R0 와 전파율 c0 의 관계는 모형 구조에 따라 다르다. 여기서는 선택한 R0 기준(아래 4절)으로 c0 를 정하고, 나머지 매개변수(잠복기, 감염 기간, 재감염 구조)는 R0 로 정해지지 않으므로 따로 넣는다. 비워 둔 칸은 <span class="tag asm">기본 가정값</span>이다.</p>
-      </fieldset>
+        <div id="ws-map" class="map ws-map" role="region" aria-label="지역 지도"></div>
+        <div class="ws-play">
+          <button type="button" class="secondary" id="ws-play" disabled>재생</button>
+          <select id="ws-speed" aria-label="재생 속도"><option value="300">0.5배</option><option value="150" selected>1배</option><option value="75">2배</option><option value="35">4배</option></select>
+          <input type="range" id="ws-slider" min="0" max="0" value="0" aria-label="시점" disabled>
+          <span id="ws-time" class="muted small"></span>
+        </div>
+        <div class="maplegend" id="ws-legend"></div>
+        <div id="run-progress" hidden class="ws-progress">
+          <div class="flex"><strong id="rp-title"></strong><span class="note" id="rp-state" role="status" aria-live="polite"></span><span class="spacer"></span>
+            <button type="button" class="secondary" id="rp-cancel">취소</button>
+            <button type="button" class="secondary" id="rp-detail" hidden>상세 결과·내보내기</button></div>
+          <div class="progress" aria-hidden="true"><div id="rp-bar"></div></div>
+        </div>
+        <p class="note" id="ws-note">지도를 눌러 발생 지역을 고른다. 색은 감염자 수(로그 간격)이며, 실행하면 시간에 따라 바뀐다.</p>
+      </div>
 
-      <fieldset><legend>3. 초기 발생 조건</legend>
-        <div class="grid2">
-          <div><div class="rows" id="f-seeds"></div>
+      <aside class="ws-right" aria-labelledby="in-h">
+        <h2 id="in-h" class="mt0">입력 <span class="tag sim">시나리오 = 가정에 따른 결과</span></h2>
+        <div class="card insrc"><strong>입력 자료</strong> <span class="muted small">(출처·시점·값의 종류)</span>
+          <div class="tablewrap"><table id="input-sources"></table></div></div>
+        <form id="scenario-form" autocomplete="off" novalidate>
+          <details open><summary>1. 기본</summary><div class="sec">
+            <label>제목 <input name="title" value="시나리오" maxlength="80"></label>
+            <label>지역 데이터셋 (공간 해상도) <select name="dataset" id="f-dataset"></select></label>
+            <label id="f-pop-wrap" hidden>인구 (합성 단일 지역) <input type="number" name="population" value="1000000" min="1"></label>
+            <label>시작일 <input type="date" name="start_date" value="2026-11-01"></label>
+            <label>기간 (일) <input type="number" name="days" value="180" min="1" max="1095"></label>
+            <div class="note" id="f-dataset-note"></div></div></details>
+
+          <details open id="sec-periods"><summary>2. 자료 시기 (지리·인구·기후)</summary><div class="sec">
+            <p class="note">기본은 확보한 가장 최신 자료다. 다른 시기를 고르면 같은 이동 가정값으로 데이터셋을 다시 만든다. 확보하지 못한 시기는 목록에 없다.</p>
+            <label id="p-bound-wrap">경계 시점 <select id="p-bound"></select></label>
+            <label>인구 기준 연도 <select id="p-pop"></select></label>
+            <label>기후 기간 <select id="p-clim"></select></label>
+            <div class="flex"><button type="button" class="secondary" id="p-latest">최신 자료로</button></div>
+            <details><summary>새 기후 기간 계산 (ERA5, 네트워크 사용)</summary>
+              <div class="flex"><label>시작 <input type="month" id="p-cs" value="2019-01"></label><label>끝 <input type="month" id="p-ce" value="2019-12"></label>
+                <button type="button" class="secondary" id="p-cbtn">계산</button></div><span class="note" id="p-cmsg" role="status"></span></details>
+            <p class="note" id="p-note"></p></div></details>
+
+          <details><summary>3. 감염병 특성</summary><div class="sec">
+            <div class="flex">
+              <label>저장된 설정 <select id="dz-presets"><option value="">(기본 가정값: COVID 유사)</option></select></label>
+              <button type="button" class="secondary" id="dz-load">불러오기</button>
+              <button type="button" class="secondary" id="dz-save">현재 설정 저장</button>
+              <button type="button" class="secondary" id="dz-del">삭제</button></div>
+            <label>감염병 이름 <input name="dz_name" value="사용자 정의" maxlength="60"></label>
+            <label>유형 <select name="dz_kind"><option value="respiratory">호흡기 전파</option><option value="contact">접촉 전파</option>
+              <option value="vector">매개체 전파</option><option value="other">기타</option></select></label>
+            <div class="params" id="dz-basic"></div>
+            <details><summary>고급 매개변수 (재감염·전파력·치명률 구조)</summary><div class="params" id="dz-adv"></div></details>
+            <p class="note" id="dz-derived"></p>
+            <p class="note">R0 와 전파율 c0 의 관계는 모형 구조에 따라 다르다. 선택한 R0 기준(5절)으로 c0 를 정하고, 나머지 매개변수는 R0 로 정해지지 않으므로 따로 넣는다. 비워 둔 칸은 <span class="tag asm">기본 가정값</span>이다.</p></div></details>
+
+          <details open><summary>4. 초기 발생 조건</summary><div class="sec">
+            <div class="rows" id="f-seeds"></div>
             <button type="button" class="secondary" id="add-seed">+ 발생 지역</button>
             <label>시작 시 면역(보호) 비율 % (모든 지역) <input type="number" name="immune_pct" value="0" min="0" max="99" step="1"></label>
-            <p class="note">I = 감염 중(전파 가능), E = 잠복(아직 전파 안 함). 지도에서 지역을 누르면 발생 지역으로 추가된다.</p></div>
-          <div><div id="seed-map" class="map small-map"></div></div>
-        </div>
-      </fieldset>
+            <p class="note">I = 감염 중(전파 가능), E = 잠복(아직 전파 안 함). "발생 지역 고르기" 모드에서 지도를 누르면 추가된다.</p></div></details>
 
-      <fieldset><legend>4. 공간·환경</legend>
-        <label class="inline"><input type="checkbox" name="use_mobility" checked> 지역 간 이동 (항공)</label>
-        <label class="inline"><input type="checkbox" name="use_commuting" checked> 지역 간 접촉 (통근)</label>
-        <label>밀도 지수 η (h = (ρ/ρ_ref)^η) <input type="number" name="eta" value="0.2" step="0.05" min="0" max="2"></label>
-        <label>R0 기준 <select name="r0_reference" id="f-basis">
-          <option value="reference">reference (기본)</option><option value="region">기준 지역 선택</option>
-          <option value="origin">원점 지역 (비교용)</option><option value="population_mean">인구가중 평균 (비교용)</option>
-          <option value="network">지역망 스펙트럼 반지름</option></select></label>
-        <label id="f-refreg-wrap" hidden>기준 지역 <select name="reference_region" id="f-refreg"></select></label>
-        <div><label>기후 효과 <select name="climate" id="f-climate"><option value="none">없음 (기본, g = 1)</option>
-          <option value="exp_linear">사용자 가정: g = exp(a_T (T − T_ref) + a_H (H − H_ref))</option></select></label>
-          <span id="f-climate-params" hidden>
-            <label>a_T <input type="number" name="climate_a_T" value="-0.02" step="0.005" min="-1" max="1"></label>
-            <label>a_H <input type="number" name="climate_a_H" value="0" step="0.005" min="-1" max="1"></label>
-            <label>T_ref °C <input type="number" name="climate_T_ref" value="15" step="1"></label>
-            <label>H_ref % <input type="number" name="climate_H_ref" value="60" step="1"></label></span>
-          <p class="note" id="f-climate-note">기후 효과는 실제 자료로 추정하지 않았다. 켜면 사용자 가정값으로 표시된다.</p></div>
-      </fieldset>
+          <details><summary>5. 공간·환경</summary><div class="sec">
+            <label class="inline"><input type="checkbox" name="use_mobility" checked> 지역 간 이동 (항공)</label>
+            <label class="inline"><input type="checkbox" name="use_commuting" checked> 지역 간 접촉 (통근)</label>
+            <label>밀도 지수 η (h = (ρ/ρ_ref)^η) <input type="number" name="eta" value="0.2" step="0.05" min="0" max="2"></label>
+            <label>R0 기준 <select name="r0_reference" id="f-basis">
+              <option value="reference">reference (기본)</option><option value="region">기준 지역 선택</option>
+              <option value="origin">원점 지역 (비교용)</option><option value="population_mean">인구가중 평균 (비교용)</option>
+              <option value="network">지역망 스펙트럼 반지름</option></select></label>
+            <label id="f-refreg-wrap" hidden>기준 지역 <select name="reference_region" id="f-refreg"></select></label>
+            <div><label>기후 효과 <select name="climate" id="f-climate"><option value="none">없음 (기본, g = 1)</option>
+              <option value="exp_linear">사용자 가정: g = exp(a_T (T − T_ref) + a_H (H − H_ref))</option></select></label>
+              <span id="f-climate-params" hidden>
+                <label>a_T <input type="number" name="climate_a_T" value="-0.02" step="0.005" min="-1" max="1"></label>
+                <label>a_H <input type="number" name="climate_a_H" value="0" step="0.005" min="-1" max="1"></label>
+                <label>T_ref °C <input type="number" name="climate_T_ref" value="15" step="1"></label>
+                <label>H_ref % <input type="number" name="climate_H_ref" value="60" step="1"></label></span>
+              <p class="note" id="f-climate-note">기후 효과는 실제 자료로 추정하지 않았다. 켜면 사용자 가정값으로 표시된다.</p></div></div></details>
 
-      <fieldset><legend>5. 방역·개입 u(t) (접촉 감소 비율 0~1, 구간 [시작일, 끝일))</legend>
-        <div class="rows" id="f-ints"></div>
-        <button type="button" class="secondary" id="add-int">+ 개입 구간</button>
-        <p class="note">백신 구획은 방정식에 없다. 백신 효과는 시작 시 면역 비율이나 접촉 감소 u 로 근사해야 하며, 그 경우 가정임을 기록한다.</p>
-      </fieldset>
+          <details><summary>6. 방역·개입 u(t)</summary><div class="sec">
+            <p class="note">접촉 감소 비율 0~1, 구간 [시작일, 끝일). 백신 구획은 방정식에 없다 (시작 시 면역 비율이나 u 로 근사하고 가정임을 기록한다).</p>
+            <div class="rows" id="f-ints"></div>
+            <button type="button" class="secondary" id="add-int">+ 개입 구간</button></div></details>
 
-      <details><summary>6. 계산 설정 (고급)</summary><fieldset>
-        <label>방법 <select name="method">
-          <option value="hybrid">하이브리드 (기본)</option><option value="tau">tau-leaping</option>
-          <option value="ctmc">정확한 CTMC (느림)</option><option value="sde">SDE</option><option value="ode">ODE (결정론, 1회)</option></select></label>
-        <label>실행 횟수 <input type="number" name="n_runs" value="20" min="1" max="500"></label>
-        <label>작업자 수 <input type="number" name="n_workers" value="1" min="1" max="4"></label>
-        <label>난수 시드 <input type="number" name="seed" value="20260101" min="0"></label>
-        <label>tau-leap ε <input type="number" name="tau_leap_epsilon" value="0.003" step="any" min="0.0005" max="0.1"></label>
-        <label>SDE 시간 간격 (일) <input type="number" name="sde_dt" value="0.05" step="0.01" min="0.001" max="1"></label>
-        <label>하이브리드 전환 (올림 / 내림) <span class="flex"><input type="number" name="hybrid_up" value="100" min="2"><input type="number" name="hybrid_down" value="50" min="1"></span></label>
-        <p class="note">ε 가 작을수록 정확하고 느리다. 기본 0.003 은 조건별 실험(docs/reports/D007_D004.md)에서 하이브리드가 모든 시험 모형에서 CTMC 와 일치한 값이다. 여러 지역 모형은 0.01 도 통과했다.</p>
-      </fieldset></details>
+          <details><summary>7. 매개변수 불확실성 (선택)</summary><div class="sec">
+            <p class="note">범위를 켠 값은 실행마다 [하한, 상한] 에서 균등하게 한 번 뽑는다 (<span class="tag user">사용자 가정 범위</span>). 결과 띠가 확률적 변동과 함께 이 불확실성을 반영한다. 끄면 띠는 확률적 변동만 반영한다.</p>
+            <div id="unc-rows"></div></div></details>
 
-      <div class="flex" style="margin-top:8px">
-        <button type="button" class="secondary" id="check-btn">점검·예상 계산량</button>
-        <button type="submit" class="primary" id="run-btn">실행</button>
-        <button type="button" class="secondary" id="save-cfg">설정 파일 저장 (JSON)</button>
-        <label class="inline small">설정 파일 불러오기 <input type="file" id="load-cfg" accept=".json,application/json"></label>
-      </div>
-      <div id="run-msg" class="note" role="status"></div>
-    </form>
-    <div id="run-progress" hidden class="card" style="margin-top:12px">
-      <div class="flex"><strong id="rp-title"></strong><span class="note" id="rp-state"></span><span class="spacer"></span>
-        <button class="secondary" id="rp-cancel">취소</button></div>
-      <div class="progress"><div id="rp-bar"></div></div>
+          <details><summary>8. 계산 설정 (고급)</summary><div class="sec">
+            <label>방법 <select name="method">
+              <option value="hybrid">하이브리드 (기본)</option><option value="tau">tau-leaping</option>
+              <option value="ctmc">정확한 CTMC (느림)</option><option value="sde">SDE</option><option value="ode">ODE (결정론, 1회)</option></select></label>
+            <label>실행 횟수 <input type="number" name="n_runs" value="20" min="1" max="500"></label>
+            <label>작업자 수 <input type="number" name="n_workers" value="1" min="1" max="4"></label>
+            <label>난수 시드 <input type="number" name="seed" value="20260101" min="0"></label>
+            <label>tau-leap ε <input type="number" name="tau_leap_epsilon" value="0.003" step="any" min="0.0005" max="0.1"></label>
+            <label>SDE 시간 간격 (일) <input type="number" name="sde_dt" value="0.05" step="0.01" min="0.001" max="1"></label>
+            <label>하이브리드 전환 (올림 / 내림) <span class="flex"><input type="number" name="hybrid_up" value="100" min="2" aria-label="전환 올림"><input type="number" name="hybrid_down" value="50" min="1" aria-label="전환 내림"></span></label>
+            <p class="note">ε 가 작을수록 정확하고 느리다. 기본 0.003 은 조건별 실험(docs/reports/D007_D004.md)에서 하이브리드가 시험 모형 모두에서 CTMC 와 일치한 값이다. 전 세계 데이터셋은 0.01 도 통과했다 (1회 약 1분).</p></div></details>
+
+          <div class="ws-actions">
+            <button type="submit" class="primary" id="run-btn">실행</button>
+            <button type="button" class="secondary" id="check-btn">점검·예상 계산량</button>
+            <button type="button" class="secondary" id="save-cfg">설정 저장 (JSON)</button>
+            <label class="inline small">불러오기 <input type="file" id="load-cfg" accept=".json,application/json"></label>
+          </div>
+          <div id="run-msg" class="note" role="status" aria-live="polite"></div>
+        </form>
+      </aside>
     </div>
   </section>
 
   <!-- 결과·비교 -->
   <section id="tab-results" hidden>
-    <h2>결과·비교 <span class="tag sim">시뮬레이션 결과</span></h2>
+    <h2>저장된 결과·비교 <span class="tag sim">시뮬레이션 결과</span></h2>
     <div class="grid2">
       <div class="card"><h3 class="mt0">저장된 작업</h3>
-        <div class="tablewrap"><table id="jobs-table"><thead><tr><th>비교</th><th>제목</th><th>종류</th><th>상태</th><th>만든 시각 (UTC)</th></tr></thead><tbody></tbody></table></div>
+        <div class="tablewrap"><table id="jobs-table"><thead><tr><th>비교</th><th>제목</th><th>종류</th><th>상태</th><th>만든 시각 (UTC)</th><th>관리</th></tr></thead><tbody></tbody></table></div>
         <div class="flex" style="margin-top:8px"><button class="secondary" id="compare-btn">선택한 시나리오 비교 (최대 5개)</button>
           <button class="secondary" id="refresh-jobs">새로 고침</button></div>
       </div>
@@ -161,7 +203,7 @@
         <button class="secondary" id="compare-csv">비교 표 CSV 내보내기</button></div>
     </div>
     <div id="result-view" hidden>
-      <div class="flex"><h3 id="rv-title"></h3><span class="spacer"></span><button class="secondary" id="rv-reuse">이 설정으로 새 시뮬레이션</button></div>
+      <div class="flex"><h3 id="rv-title"></h3><span class="spacer"></span><button class="secondary" id="rv-ws">작업 공간 지도로 재생</button><button class="secondary" id="rv-reuse">이 설정으로 새 시뮬레이션</button></div>
       <div id="rv-warnings"></div>
       <div class="tiles" id="rv-tiles"></div>
       <div class="grid2 wide-left">

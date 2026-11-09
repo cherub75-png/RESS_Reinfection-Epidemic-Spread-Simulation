@@ -203,3 +203,61 @@ def test_update_policy_endpoints(client, tmp_path, monkeypatch):
     assert client.post("/api/updates/openflights/policy", json={"interval_days": 0.5}).status_code in (200, 422)
     assert client.post("/api/updates/nope/policy", json={"interval_days": 3}).status_code == 404
     assert client.post("/api/updates/nope/check").status_code == 404
+
+
+def test_live_preview_and_parameter_uncertainty(client):
+    """확률 실행: 시작 직후 ODE 미리보기 -> 실행 평균 -> final. 불확실성 범위: 실행마다 다른 매개변수 (재현 가능)."""
+    req = {**BASE, "method": "tau", "n_runs": 4, "uncertainty": {"R0": [1.5, 3.0], "infectious_days": [5, 9]}}
+    r = client.post("/api/scenarios", json=req)
+    assert r.status_code == 200, r.text
+    jid = r.json()["job_id"]
+    s = _wait(client, jid)
+    assert s["state"] == "done", s
+    assert s["live_seq"] >= 2 and s["live_kind"] == "final"
+    live = client.get(f"/api/jobs/{jid}/live").json()
+    assert live["kind"] == "final" and live["runs_done"] == 4 and live["n_runs"] == 4
+    assert len(live["I"]) == len(live["t_frames"]) and len(live["daily"]["S"]) == len(live["daily"]["t"])
+    sm = client.get(f"/api/jobs/{jid}/summary").json()
+    pu = sm["parameter_uncertainty"]
+    assert pu["ranges"]["R0"] == [1.5, 3.0] and len(pu["draws"]) == 4
+    assert all(1.5 <= d["R0"] <= 3.0 and 5 <= d["infectious_days"] <= 9 for d in pu["draws"])
+    assert len({round(d["R0"], 6) for d in pu["draws"]}) == 4
+    assert any("매개변수 불확실성" in w for w in sm["warnings"])
+    from seir_sim.web.scenario import ScenarioRequest, parameter_draws
+    assert parameter_draws(ScenarioRequest.model_validate(req)) == pu["draws"]          # 같은 시드 -> 같은 추출
+
+
+def test_uncertainty_validation(client):
+    for bad in ({"R0": [3.0, 2.0]}, {"R0": [0.0, 2.0]}, {"f1": [0.1, 1.5]}, {"unknown": [1, 2]}):
+        r = client.post("/api/scenarios/check", json={**BASE, "uncertainty": bad})
+        assert r.status_code == 422, (bad, r.text)
+
+
+def test_rename_and_delete_saved_result(client):
+    jid = client.post("/api/scenarios", json=BASE).json()["job_id"]
+    assert _wait(client, jid)["state"] == "done"
+    assert client.post(f"/api/jobs/{jid}/rename", json={"title": "새 이름"}).json()["title"] == "새 이름"
+    assert client.post(f"/api/jobs/{jid}/rename", json={"title": ""}).status_code == 422
+    assert client.delete(f"/api/jobs/{jid}/files").json() == {"deleted": jid}
+    assert client.get(f"/api/jobs/{jid}").status_code == 404
+    assert client.delete("/api/jobs/" + "f" * 32 + "/files").status_code == 404
+
+
+def test_delete_refuses_running_job(client):
+    jid = client.post("/api/scenarios", json={**BASE, "method": "ctmc", "population": 200000, "n_runs": 50,
+                                               "days": 365}).json()["job_id"]
+    t0 = time.time()
+    while client.get(f"/api/jobs/{jid}").json()["state"] == "queued" and time.time() - t0 < 60:
+        time.sleep(0.1)
+    if client.get(f"/api/jobs/{jid}").json()["state"] == "running":
+        assert client.delete(f"/api/jobs/{jid}/files").status_code == 409
+    client.delete(f"/api/jobs/{jid}")
+    _wait(client, jid)
+
+
+def test_climate_period_input_validation(client):
+    for bad in ({"start": "2025-13", "end": "2026-01"}, {"start": "2026-02", "end": "2026-01"},
+                {"start": "1900-01", "end": "1900-02"}, {"start": "2000-01", "end": "2012-01"}, {}):
+        assert client.post("/api/climate-periods", json=bad).status_code == 422, bad
+    assert client.get("/api/datasets/KOR_admin1/regions?boundary_date=20261001").status_code == 400
+    assert client.post("/api/scenarios/check", json={**BASE, "climate_period": "../etc"}).status_code == 422

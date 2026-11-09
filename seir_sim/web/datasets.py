@@ -101,10 +101,14 @@ def build_and_register(req: dict, job_dir: Path) -> dict:
     table = job_dir / "population_table.csv"
     table.write_text(req["table_text"])
     a = active.provenance.get("assumptions", {})
-    ds = build_admin1(RAW / "ne_admin1_10m" / "ne_10m_admin_1_states_provinces.geojson", a3,
-                      RAW / "openflights" / "airports.dat", RAW / "openflights" / "routes.dat",
-                      a["air_trips_per_day"], a["commute_fraction"], a["destination_contact_share"],
-                      population_table=table)
+    air = (RAW / "openflights" / "airports.dat", RAW / "openflights" / "routes.dat",
+           a["air_trips_per_day"], a["commute_fraction"], a["destination_contact_share"])
+    if active.provenance.get("boundary_file"):                  # 통계청 SGIS 시도 경계를 쓰는 버전은 같은 경계로
+        from ..data.build import build_kor_sido
+        ds = build_kor_sido(RAW / "admdongkor_sido" / active.provenance["boundary_file"], *air, population_table=table)
+    else:
+        ds = build_admin1(RAW / "ne_admin1_10m" / "ne_10m_admin_1_states_provinces.geojson", a3, *air,
+                          population_table=table)
     if active.tavg is not None:
         from dataclasses import replace
         ds = replace(ds, tavg=active.tavg, rh=active.rh,

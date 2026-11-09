@@ -91,10 +91,31 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
                                      for v in e["versions"]]})
         return out
 
+    DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+    def _period_path(name: str, boundary_date: str | None, population_year: int | None):
+        """고른 경계 시점·인구 연도의 변형본 경로 (둘 다 없으면 None = 저장소 활성 버전)."""
+        if not NAME.match(name) or (boundary_date and not DATE.match(boundary_date)) or \
+                (population_year is not None and not 1960 <= population_year <= 2100):
+            raise HTTPException(400, "잘못된 값")
+        if boundary_date is None and population_year is None:
+            return None
+        from ..data.periods import variant
+        try:
+            return variant(name, population_year=population_year, boundary_date=boundary_date)
+        except KeyError:
+            raise HTTPException(404, "데이터셋 없음")
+        except ValueError as e:
+            raise HTTPException(422, str(e))
+
     @app.get("/api/datasets/{name}/geojson")
-    def dataset_geojson(name: str, version: str | None = None):
+    def dataset_geojson(name: str, version: str | None = None, boundary_date: str | None = None,
+                        population_year: int | None = None):
         if not NAME.match(name) or (version and not re.match(r"^v\d{1,4}$", version)):
             raise HTTPException(400, "잘못된 이름")
+        vp = _period_path(name, boundary_date, population_year)
+        if vp is not None:
+            return JSONResponse(json.loads(vp.with_suffix(".geojson").read_text()))
         from .datasets import geojson_for
         try:
             return geojson_for(name, version)
@@ -102,18 +123,48 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
             raise HTTPException(404, "데이터셋 없음")
 
     @app.get("/api/datasets/{name}/regions")
-    def dataset_regions(name: str):
+    def dataset_regions(name: str, boundary_date: str | None = None, population_year: int | None = None):
         if not NAME.match(name):
             raise HTTPException(400, "잘못된 이름")
+        from ..data.dataset import RegionDataset
+        from ..data.versions import Registry
+        vp = _period_path(name, boundary_date, population_year)
+        try:
+            ds = RegionDataset.load(vp if vp is not None else Registry().resolve(name))
+        except KeyError:
+            raise HTTPException(404, "데이터셋 없음")
+        return {"ids": ds.ids, "names": ds.names, "population": [None if p != p else float(p) for p in ds.population],
+                "area_km2": [round(float(a), 1) for a in ds.area_km2],
+                "provenance": {k: ds.provenance.get(k) for k in ("scope", "boundaries", "population", "assumptions",
+                                                                 "climate", "built_utc", "population_year",
+                                                                 "period_selection", "boundary_file")}}
+
+    @app.get("/api/datasets/{name}/periods")
+    def dataset_periods(name: str):
+        """고를 수 있는 경계 시점·인구 연도·기후 기간과 각각의 출처. 확보하지 못한 시기는 목록에 없다."""
+        if not NAME.match(name):
+            raise HTTPException(400, "잘못된 이름")
+        from ..data import periods
         from ..data.dataset import RegionDataset
         from ..data.versions import Registry
         try:
             ds = RegionDataset.load(Registry().resolve(name))
         except KeyError:
             raise HTTPException(404, "데이터셋 없음")
-        return {"ids": ds.ids, "names": ds.names, "population": [None if p != p else float(p) for p in ds.population],
-                "provenance": {k: ds.provenance.get(k) for k in ("scope", "boundaries", "population", "assumptions",
-                                                                 "climate", "built_utc")}}
+        return periods.options(periods.family(ds.provenance))
+
+    @app.post("/api/climate-periods")
+    def climate_period_submit(body: dict = Body(...)):
+        """ERA5 기간 월 평균 만들기 (네트워크 사용, 1년에 1~2분). 본문: {"start": "YYYY-MM", "end": "YYYY-MM"}."""
+        ym = re.compile(r"^(19[4-9]\d|20\d\d)-(0[1-9]|1[0-2])$")
+        st, en = str(body.get("start", "")), str(body.get("end", ""))
+        if not (ym.match(st) and ym.match(en)) or en < st:
+            raise HTTPException(422, "start, end 는 YYYY-MM (start <= end)")
+        y0, m0 = map(int, st.split("-"))
+        y1, m1 = map(int, en.split("-"))
+        if (y1 - y0) * 12 + m1 - m0 + 1 > 120:
+            raise HTTPException(422, "한 번에 10년(120개월)까지")
+        return {"job_id": jobs.submit("climate", {"start": st, "end": en}, f"ERA5 기후 {st} ~ {en}")}
 
     @app.post("/api/datasets/{name}/activate")
     def dataset_activate(name: str, body: dict = Body(...)):
@@ -167,14 +218,17 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
             pops = {"region0": float(req.population or 1e6)}
             req_check = req.model_copy(update={"seeds": [s.model_copy(update={"region": "region0"}) for s in req.seeds]})
         else:
-            from ..data.dataset import RegionDataset
             from ..data.versions import Registry
+            from .scenario import load_request_dataset
             if req.dataset not in Registry().list():
                 raise HTTPException(422, f"데이터셋 {req.dataset} 이 저장소에 없다")
-            ds = RegionDataset.load(Registry().resolve(req.dataset))
+            try:
+                ds = load_request_dataset(req, with_climate=req.climate != "none")
+            except ValueError as e:
+                raise HTTPException(422, str(e)[:500])
             pops = dict(zip(ds.ids, ds.population.tolist()))
             if req.climate != "none" and ds.tavg is None:
-                raise HTTPException(422, "이 데이터셋에는 기후 자료가 없어 기후 효과를 켤 수 없다 (미확보)")
+                raise HTTPException(422, "이 데이터셋에는 기후 자료가 없어 기후 효과를 켤 수 없다 (미확보). 기후 기간을 고른다")
             req_check = req
         errs = check_against_populations(req_check, pops)
         if errs:
@@ -300,6 +354,31 @@ def create_app(job_root: Path | None = None, max_concurrent: int = 1, allowed_ho
     def job_cancel(job_id: str):
         _job_dir(job_id)
         return jobs.cancel(job_id)
+
+    @app.post("/api/jobs/{job_id}/rename")
+    def job_rename(job_id: str, body: dict = Body(...)):
+        _job_dir(job_id)
+        title = str(body.get("title", "")).strip()
+        if not 1 <= len(title) <= 80:
+            raise HTTPException(422, "제목은 1~80자")
+        return jobs.rename(job_id, title)
+
+    @app.delete("/api/jobs/{job_id}/files")
+    def job_delete(job_id: str):
+        """끝난 작업의 결과 폴더를 지운다 (실행 중이거나 대기 중이면 거부). 화면에서 사용자가 확인한 뒤에만 부른다."""
+        _job_dir(job_id)
+        try:
+            jobs.delete(job_id)
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+        return {"deleted": job_id}
+
+    @app.get("/api/jobs/{job_id}/live")
+    def job_live(job_id: str):
+        d = _job_dir(job_id)
+        if not (d / "live.json").exists():
+            raise HTTPException(404, "아직 중간 결과가 없다")
+        return JSONResponse(json.loads((d / "live.json").read_text()))
 
     @app.get("/api/jobs/{job_id}/summary")
     def job_summary(job_id: str):

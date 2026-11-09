@@ -64,6 +64,11 @@ def _job_main(kind: str, job_dir: str, env: dict | None = None) -> None:
             (d / "result.json").write_text(json.dumps(out, ensure_ascii=False, default=str))
             if out["result"] == "failed":
                 raise RuntimeError(out.get("message", "갱신 실패"))
+        elif kind == "climate":
+            from ..data import era5, periods
+            out = era5.monthly_means(req["start"], req["end"], periods.CLIMATE / f"era5_{req['start']}_{req['end']}",
+                                     log=lambda m: write_status(d, message=m))
+            (d / "result.json").write_text(json.dumps(out, ensure_ascii=False, default=str))
         elif kind == "dataset":
             from .datasets import build_and_register
             out = build_and_register(req, d)
@@ -149,6 +154,23 @@ class JobManager:
         if s.get("state") == "queued":
             write_status(d, state="cancelled", message="시작 전 취소")
         return self.status(job_id)
+
+    def rename(self, job_id: str, title: str) -> dict:
+        write_status(self.dir(job_id), title=title)
+        return self.status(job_id)
+
+    def delete(self, job_id: str) -> None:
+        """끝난 작업 폴더만 지운다 (작업 id 형식과 폴더 위치는 dir() 가 확인한다)."""
+        import shutil
+        d = self.dir(job_id)
+        if self.status(job_id).get("state") in ("queued", "running"):
+            raise ValueError("대기 중이거나 실행 중인 작업은 지울 수 없다 (먼저 취소)")
+        with self.lock:
+            if job_id in self.procs:
+                raise ValueError("작업 프로세스가 아직 끝나지 않았다")
+        if d.parent.resolve() != self.root.resolve():
+            raise ValueError("작업 폴더 위치가 올바르지 않다")
+        shutil.rmtree(d)
 
     def list(self) -> list[dict]:
         out = []
