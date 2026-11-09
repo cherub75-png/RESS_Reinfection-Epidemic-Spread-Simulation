@@ -1101,13 +1101,14 @@ function renderFlu(res) {
 function drawFluSeries() {
   if (!FLU) return;
   const r = FLU.series.find((x) => x.series === $("#flu-series").value); if (!r) return;
-  const hw = r.history.weeks, tw = FLU.target_weeks;
+  const NW = 40;                                     // 그래프는 최근 40주만 (예측 4주가 잘 보이게; 표·자료는 전체)
+  const hw = r.history.weeks.slice(-NW), hp = r.history.positivity.slice(-NW), tw = FLU.target_weeks;
   const xs = [...hw, ...tw].map((w) => new Date(w));
   const pad = hw.map(() => null), padT = tw.map(() => null);
-  const series = [{ name: "관측 양성률", color: "--series-5", values: [...r.history.positivity, ...padT], points: true }];
+  const series = [{ name: "관측 양성률", color: "--series-5", values: [...hp, ...padT], points: true }];
   const ms = ["ml_cal", "seasonal", "persistence", "seir"].filter((m) => r.methods[m]);
   ms.forEach((m, k) => { const q = r.methods[m];
-    series.push({ name: FLU_LABEL[m], color: SERIES[k], dash: m === "ml_cal" ? "" : "5 3", values: [...pad.slice(0, -1), r.history.positivity.at(-1), ...q.map((x) => x[4])],
+    series.push({ name: FLU_LABEL[m], color: SERIES[k], dash: m === "ml_cal" ? "" : "5 3", values: [...pad.slice(0, -1), hp.at(-1), ...q.map((x) => x[4])],
       band: m === "ml_cal" ? [[...pad, ...q.map((x) => x[1])], [...pad, ...q.map((x) => x[7])]] : undefined }); });
   legend($("#flu-lg"), [...series.map((x) => ({ name: x.name, color: x.color })), ...(r.methods.ml_cal ? [{ name: "ML+보정 90% 구간", color: SERIES[0], dash: true }] : [])]);
   lineChart($("#flu-chart"), { xs, series, yMin: 0, yFormat: (y) => pp(y), xFormat: (x) => (x instanceof Date ? x.toISOString().slice(0, 10) : x), ariaLabel: `${r.name} 인플루엔자 양성률` });

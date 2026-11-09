@@ -208,6 +208,27 @@ for (const scheme of ["light", "dark"]) {
     check(true, "서버 입력 오류 메시지 표시");
     await page.fill("#f-seeds .row input", "10");
   }
+  if (scheme === "light") {
+    // 인플루엔자 최신 자료 예측: 결과가 없으면 실행한다 (1~3분)
+    await page.click('#tabs button[data-tab="latest"]');
+    const has = (await page.request.get(BASE + "/api/flu/latest")).ok();
+    if (!has) {
+      await page.click("#flu-run");
+      await page.waitForFunction(() => document.querySelectorAll("#flu-series option").length > 0, null, { timeout: 600000 });
+    }
+    await page.waitForFunction(() => document.querySelectorAll("#flu-map .leaflet-interactive").length > 100, null, { timeout: 60000 });
+    await page.waitForSelector("#flu-chart svg path", { timeout: 30000 });
+    check((await page.locator("#flu-series option").count()) >= 20, `인플루엔자 계열 목록 ${await page.locator("#flu-series option").count()}개`);
+    check((await page.locator("#flu-table tr").count()) >= 3, "인플루엔자 예측 표 (방법별)");
+    check((await page.textContent("#flu-info")).includes("기점 주"), "인플루엔자 기점·자료 날짜 표시");
+    check((await page.textContent("#flu-val")).includes("과거 검증"), "인플루엔자 검증 성능 표시");
+    await page.selectOption("#flu-h", "4"); await page.waitForTimeout(300);
+    check((await page.textContent("#flu-legend")).includes("%"), "인플루엔자 지도 범례");
+    await page.selectOption("#lf-disease", "covid"); await page.waitForTimeout(200);
+    check(await page.locator("#lf-covid").isVisible() && !(await page.locator("#lf-flu").isVisible()), "감염병 전환 (COVID-19)");
+    await page.selectOption("#lf-disease", "flu");
+    await shot(page, "ui_flu_light");
+  }
   for (const tab of ["validation", "data", "sources", "help", "latest", "results"]) {
     await page.click(`#tabs button[data-tab="${tab}"]`);
     await page.waitForTimeout(1200);

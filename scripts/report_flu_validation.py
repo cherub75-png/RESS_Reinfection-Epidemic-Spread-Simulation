@@ -62,6 +62,7 @@ def main():
     run = json.loads((ROOT / "outputs" / "flu" / "run_record.json").read_text())
     sp = ROOT / "outputs" / "flu" / "seir_forecasts.parquet"
     seir = pd.read_parquet(sp) if sp.exists() else None
+    fc["h"] = fc["h"].astype(int)
     fc = score(fc)
     fc["zone"] = fc["lat"].map(zone)
     rep = {"run": {k: run[k] for k in ("n_series", "origins", "refit_every_weeks", "climate_features")}, "series": run["series"]}
@@ -82,6 +83,7 @@ def main():
                         "wis_ratio": float(b["wis"].mean() / a["wis"].mean()), "success": ok})
     rep["calibration"] = calrows
     if seir is not None and len(seir):
+        seir["h"] = seir["h"].astype(int)
         s2 = score(seir)
         base = fc[fc["series"].isin(seir["series"].unique()) & fc["origin"].isin(seir["origin"].unique())]
         both = pd.concat([base, s2], ignore_index=True)
