@@ -241,10 +241,16 @@ function play(on) {
   $("#ws-play").textContent = "멈춤";
   WS.timer = setInterval(() => { if (!WS.data) return; let i = WS.frame + 1;
     if (i >= WS.data.n) { if (WS.data.complete) { play(false); return; } i = WS.data.n - 1; }
-    frame(i); }, +$("#ws-speed").value);
+    frame(i); }, WS.speed);
 }
 $("#ws-play").addEventListener("click", () => play());
-$("#ws-speed").addEventListener("change", () => { if (WS.timer) play(true); });
+// 재생 속도: 하루당 1초(기본) 또는 0.1초. 재생 중에 누르면 바로 바뀐다.
+WS.speed = 1000;
+for (const b of $$("[data-ms]")) b.addEventListener("click", () => {
+  WS.speed = +b.dataset.ms;
+  for (const x of $$("[data-ms]")) x.setAttribute("aria-pressed", String(x === b));
+  if (WS.timer) play(true);
+});
 $("#ws-slider").addEventListener("input", () => { play(false); frame(+$("#ws-slider").value); });
 for (const id of ["#ws-layer", "#ws-scale"]) $(id).addEventListener("change", () => { if (WS.data) { wsBins(); wsLegend(); frame(WS.frame); } });
 
