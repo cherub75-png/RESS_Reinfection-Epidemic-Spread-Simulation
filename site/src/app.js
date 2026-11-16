@@ -163,17 +163,19 @@ function wsValue(i, k) {
   const v = arr[i * d.K + k];
   return $("#ws-scale").value === "per100k" ? (v / Math.max(WS.ds.population[k], 1)) * 1e5 : v;
 }
-function wsBins() {
-  let mx = 0; const d = WS.data;
-  for (let i = 0; i < d.n; i++) for (let k = 0; k < d.K; k++) { const v = wsValue(i, k); if (v > mx) mx = v; }
-  const b = []; if (mx > 0) for (let i = 7; i >= 1; i--) b.push(mx / 2 ** (i * 1.2));
-  WS.bins = { mx, b };
-}
+// 색 기준: 실행·시점과 무관한 고정 로그 간격. 처음 감염이 생기는 단계부터 색이 바뀌도록 아래쪽을 10배 간격으로 잘게 나눈다.
+// 그 지역의 해당 값이 1명 미만이면 "거의 없음" 으로 따로 칠한다 (ODE 는 소수점 인원도 계산하므로).
+const EDGES = { per100k: [0.1, 1, 10, 100, 300, 1000, 3000], abs: [10, 100, 1000, 1e4, 1e5, 1e6, 1e7] };
+function wsBins() { WS.bins = { b: EDGES[$("#ws-scale").value] }; }
 function wsStyle(f) {
   if (WS.mode === "seed" || !WS.data) return { color: css("--surface"), weight: 1, fillOpacity: 0.85, fillColor: seeded().has(f.id) ? css("--seed") : css("--r1") };
-  const k = WS.idx[f.id], v = k === undefined ? null : wsValue(WS.frame, k);
+  const k = WS.idx[f.id], d = WS.data;
   let col = css("--nodata");
-  if (v !== null && isFinite(v)) { if (v < 1e-9) col = css("--surface-2"); else { let j = 0; while (j < WS.bins.b.length && v > WS.bins.b[j]) j++; col = css(RAMP[Math.min(j, 7)]); } }
+  if (k !== undefined) {
+    const raw = d[$("#ws-layer").value][WS.frame * d.K + k], v = wsValue(WS.frame, k);
+    if (!(raw >= 1)) col = css("--surface-2");
+    else { let j = 0; while (j < WS.bins.b.length && v > WS.bins.b[j]) j++; col = css(RAMP[Math.min(j, 7)]); }
+  }
   const sel = WS.region === f.id;
   return { color: sel ? css("--ink") : css("--surface"), weight: sel ? 2.5 : 1, fillOpacity: 0.92, fillColor: col };
 }
@@ -187,10 +189,11 @@ function wsTip(f) {
 function wsLegend() {
   const lg = $("#ws-legend"); lg.innerHTML = "";
   if (WS.mode === "seed" || !WS.data) { lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--seed")}` }), "발생 지역"), el("span", {}, el("span", { class: "sw", style: `background:${css("--r1")}` }), "다른 지역")); return; }
-  lg.append(`${$("#ws-layer").selectedOptions[0].text} (${$("#ws-scale").value === "per100k" ? "10만 명당" : "명"}):`);
-  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--surface-2")}` }), "0"));
-  const edges = [0, ...WS.bins.b];
-  for (let j = 0; j < 8 && j < edges.length; j++) lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css(RAMP[j])}` }), `≤${fmt(j + 1 < edges.length ? edges[j + 1] : WS.bins.mx)}`));
+  const per = $("#ws-scale").value === "per100k", e = WS.bins.b, n = (v) => (v >= 1e4 ? fmt(v) : String(v));
+  lg.append(`${$("#ws-layer").selectedOptions[0].text} (${per ? "10만 명당" : "명"}):`);
+  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--surface-2")}` }), "1명 미만"));
+  for (let j = 0; j < 8; j++) lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css(RAMP[j])}` }),
+    j === 0 ? `${n(e[0])} 이하` : j < 7 ? `${n(e[j - 1])}–${n(e[j])}` : `${n(e[6])} 초과`));
 }
 function frame(i) {
   const d = WS.data; if (!d) return;
@@ -425,6 +428,7 @@ function renderInfo() {
     "감염병 기본값은 COVID 유사 코드 검증용 가정값이다. 새 감염병의 값은 사용자가 근거와 함께 넣어야 한다.",
     "대한민국 시도 인구는 WorldPop 모델 추정이다 (주민등록 인구 아님). 지역 간 이동 규모·통근·접촉 비율은 가정값이다.",
     "방정식에 백신·변이·연령 구조·해외 유입 항이 없다. 기후 효과는 추정하지 않았다 (켜면 사용자 가정).",
+    "기본 조건(R0 2.5, 처음에 모두 감수성, 백신 없음, 30~90일 한 번의 약한 개입)에서는 1년 뒤 세계 인구의 약 92% 가 한 번 이상 감염된다. 단순 SIR 이론의 최종 규모(R0 2.5 에서 89%)와 같은 크기다. 실제 COVID-19 는 방역·행동 변화·백신 때문에 이보다 느리고 나라마다 달랐다. 실제와 비교하려면 개입 구간, 시작 시 면역 비율, R0 를 바꿔 본다.",
     "시나리오는 \"이렇게 가정하면 이렇게 된다\" 는 계산이며 예측이 아니다. 인플루엔자 예측은 계산해 둔 날짜 기준이며 이 페이지가 스스로 갱신하지 않는다."];
   box.append(el("h2", {}, "자료·한계"),
     el("div", { class: "card valtab" }, el("h3", {}, "한계"), el("ul", {}, ...lim.map((t) => el("li", {}, t)))),
