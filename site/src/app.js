@@ -293,9 +293,9 @@ function runScenario(e) {
       $("#rp-bar").style.width = `${Math.round((100 * m.upto) / days * (q.draws ? 0.5 : 1))}%`;
       $("#rp-state").textContent = `${m.upto} / ${days}일 계산 (${m.seconds.toFixed(1)}초)`;
       wsBins();
-      if (first) { first = false; setMode("result"); }
       wsLegend();
-      if (!WS.timer) frame(d.n - 1);
+      // 계산이 끝난 날로 건너뛰지 않고 0일부터 하루씩 재생한다 (1배 = 하루 0.1초). 재생이 계산을 앞지르면 기다린다.
+      if (first) { first = false; setMode("result"); frame(0); play(true); }
       if (m.type === "central") { d.complete = true; $("#lv-badge").textContent = q.draws ? "중앙값 경로 완료" : "완료"; $("#lv-badge").className = "tag sim"; }
     } else if (m.type === "drawProgress") {
       $("#rp-bar").style.width = `${Math.round(50 + (50 * m.done) / m.total)}%`; $("#rp-state").textContent = `불확실성 반복 ${m.done} / ${m.total}`;
