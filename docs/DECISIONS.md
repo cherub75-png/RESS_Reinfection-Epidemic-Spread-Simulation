@@ -244,3 +244,9 @@ N = 2e4, R0 = 2, 재감염 없음, 600회 기준 대유행 조건부 최종 규�
 - 시도별 u(t) 추정(D-026)은 하지 않는다. 시도 단위 시나리오의 u(t) 는 사용자가 넣는 가정값이다.
 - 나중에 KOSIS 인구표나 시도별 확진 자료를 넣으려면: 웹 "데이터 관리" 의 인구표 업로드, `scripts/build_regions.py --population-table`, D-026 의 설계를 쓴다.
 
+## D-028 공개 사이트: 브라우저 계산판 [사용자 요청, 2026-11-16]
+
+- 사용자 지시: "배포하고 사이트로 만들어줘". 외부 호스팅 계정 없이 쓸 수 있도록 claude.ai 게시 페이지로 만들었다 (처음에는 비공개, 공유는 사용자가 정함).
+- 서버가 없으므로 결정론적 ODE 엔진을 JavaScript 로 옮겼다 (`site/src/engine.js`). Python FastODE (RK4, 하루 4단계) 와 같은 초기 상태에서 상대 차이 5×10⁻¹⁵ (`site/test/engine_vs_python.mjs`).
+- 확률적 방법(하이브리드·CTMC·tau·SDE), 자료 갱신, 인플루엔자 재계산은 Python 판에만 있다. 사이트의 인플루엔자 예측과 검증 결과는 만든 날의 결과를 담는다.
+- 만들기: `python -I scripts/build_static_site.py` → `site/dist/`.

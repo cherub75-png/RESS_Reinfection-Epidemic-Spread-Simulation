@@ -1,0 +1,145 @@
+<title>재감염 SEIR 시뮬레이터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+<header class="top">
+  <div class="brand"><strong>재감염 SEIR 시뮬레이터</strong><span class="sub">브라우저 계산판 · 연구·시나리오용</span></div>
+  <nav class="tabs" role="tablist" aria-label="화면">
+    <button type="button" role="tab" id="t-sim" aria-selected="true" data-tab="sim">시뮬레이션</button>
+    <button type="button" role="tab" id="t-flu" aria-selected="false" data-tab="flu">인플루엔자 최신 예측</button>
+    <button type="button" role="tab" id="t-val" aria-selected="false" data-tab="val">예측 검증</button>
+    <button type="button" role="tab" id="t-info" aria-selected="false" data-tab="info">자료·한계</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 시뮬레이션: 왼쪽 수치 · 가운데 지도 · 오른쪽 입력 -->
+  <section id="tab-sim" class="ws">
+    <aside class="ws-left" aria-labelledby="lv-h">
+      <div class="row"><h2 id="lv-h">현재 수치</h2><span id="lv-badge" class="tag asm" role="status">대기</span></div>
+      <div id="lv-day" class="lv-day">오른쪽에서 조건을 정하고 <b>실행</b>을 누르면 지도와 수치가 날마다 바뀐다.</div>
+      <div id="lv-tiles" class="lv-tiles"></div>
+      <div id="lv-spark" class="lv-spark"></div>
+      <h3>감염이 많은 지역 <span class="muted">(10만 명당)</span></h3>
+      <ol id="lv-top" class="lv-top"></ol>
+      <div id="lv-region"></div>
+      <p class="note">값은 모형 안의 실제 감염 상태다 (관측 확진자 수가 아님). <span class="tag sim">시뮬레이션 결과</span></p>
+    </aside>
+
+    <div class="ws-center">
+      <div class="tools">
+        <span class="seg" role="group" aria-label="지도 모드">
+          <button type="button" id="mode-seed" aria-pressed="true">발생 지역 고르기</button>
+          <button type="button" id="mode-result" aria-pressed="false" disabled>결과 보기</button></span>
+        <label class="inline">값 <select id="ws-layer"><option value="I">감염 중 I</option><option value="E">잠복 E</option><option value="D">누적 사망 D</option></select></label>
+        <label class="inline">단위 <select id="ws-scale"><option value="per100k">10만 명당</option><option value="abs">절대 인원</option></select></label>
+      </div>
+      <div id="ws-map" class="map" role="region" aria-label="지역 지도"></div>
+      <div class="play">
+        <button type="button" id="ws-play" disabled>재생</button>
+        <select id="ws-speed" aria-label="재생 속도"><option value="300">0.5배</option><option value="150" selected>1배</option><option value="75">2배</option><option value="35">4배</option></select>
+        <input type="range" id="ws-slider" min="0" max="0" value="0" aria-label="시점" disabled>
+        <span id="ws-time" class="muted"></span>
+      </div>
+      <div id="ws-legend" class="legend"></div>
+      <div id="run-progress" class="progress-card" hidden>
+        <div class="row"><strong id="rp-title"></strong><span id="rp-state" class="note" role="status" aria-live="polite"></span></div>
+        <div class="bar" aria-hidden="true"><div id="rp-bar"></div></div>
+      </div>
+      <p id="ws-note" class="note">지도를 눌러 발생 지역을 고른다 (주황 = 고른 지역).</p>
+    </div>
+
+    <aside class="ws-right" aria-labelledby="in-h">
+      <h2 id="in-h">입력 <span class="tag sim">시나리오 = 가정에 따른 결과</span></h2>
+      <div class="card insrc"><strong>입력 자료</strong> <span class="muted">출처·시점·값의 종류</span>
+        <div class="tablewrap"><table id="input-sources"></table></div></div>
+      <form id="form" autocomplete="off" novalidate>
+        <details open><summary>1. 기본</summary><div class="sec">
+          <label>제목 <input id="f-title" value="시나리오" maxlength="80"></label>
+          <label>지역 <select id="f-ds"><option value="KOR_admin1">대한민국 시도</option><option value="world_countries">전 세계 국가</option></select></label>
+          <label>시작일 <input type="date" id="f-start" value="2026-11-01"></label>
+          <label>기간 (일) <input type="number" id="f-days" value="180" min="1" max="730"></label>
+        </div></details>
+        <details open><summary>2. 감염병 특성</summary><div class="sec">
+          <div class="grid2">
+            <label>R0 <input type="number" id="p-R0" value="2.5" step="0.1" min="0.1" max="20"></label>
+            <label>잠복기 (일) <input type="number" id="p-inc" step="0.1" min="0.1" max="60"></label>
+            <label>감염 기간 (일) <input type="number" id="p-inf" step="0.1" min="0.1" max="120"></label>
+            <label>면역 유지 (일, 0 = 소실 없음) <input type="number" id="p-imm" step="1" min="0" max="36500"></label>
+            <label>첫 감염 치명률 <input type="number" id="p-f1" step="0.001" min="0" max="1"></label>
+          </div>
+          <details><summary>고급: 재감염·전파력·치명률 구조</summary><div class="grid2">
+            <label>첫 감염 감수성 P1 <input type="number" id="p-P1" step="0.05" min="0.01" max="1"></label>
+            <label>재감염 감수성 하한 Pmin <input type="number" id="p-Pmin" step="0.05" min="0" max="1"></label>
+            <label>감수성 감소 속도 α <input type="number" id="p-alpha" step="0.05" min="0" max="50"></label>
+            <label>첫 감염 전파력 T1 <input type="number" id="p-T1" step="0.05" min="0.01" max="10"></label>
+            <label>전파력 감소 지수 β <input type="number" id="p-beta" step="0.05" min="0" max="5"></label>
+            <label>치명률 감소 지수 δ <input type="number" id="p-delta" step="0.05" min="0" max="5"></label>
+          </div></details>
+          <p class="note" id="p-derived"></p>
+          <p class="note">기본값은 <span class="tag asm">COVID 유사 코드 검증용 가정값</span>이다 (실제 추정치 아님). R0 는 reference 기준 (기준 밀도, 개입 없음, 단일 지역) 으로 전파율 c0 를 정한다.</p>
+        </div></details>
+        <details open><summary>3. 초기 발생</summary><div class="sec">
+          <div id="seeds" class="rows"></div>
+          <button type="button" id="add-seed" class="ghost">+ 발생 지역</button>
+          <label>시작 시 면역 비율 % (모든 지역) <input type="number" id="f-immune" value="0" min="0" max="99"></label>
+          <p class="note">I = 감염 중, E = 잠복. "발생 지역 고르기" 모드에서 지도를 누르면 추가된다.</p>
+        </div></details>
+        <details><summary>4. 공간·환경</summary><div class="sec">
+          <label class="check"><input type="checkbox" id="f-mob" checked> 지역 간 이동 (항공)</label>
+          <label class="check"><input type="checkbox" id="f-com" checked> 지역 간 접촉 (통근)</label>
+          <label>밀도 지수 η (h = (ρ/ρ_ref)^η) <input type="number" id="f-eta" value="0.2" step="0.05" min="0" max="2"></label>
+          <label class="check"><input type="checkbox" id="f-clim"> 기후 효과 (사용자 가정): g = exp(a_T (T − T_ref) + a_H (H − H_ref))</label>
+          <div id="clim-params" class="grid2" hidden>
+            <label>a_T <input type="number" id="c-aT" value="-0.02" step="0.005" min="-1" max="1"></label>
+            <label>a_H <input type="number" id="c-aH" value="0" step="0.005" min="-1" max="1"></label>
+            <label>T_ref °C <input type="number" id="c-Tref" value="15" step="1"></label>
+            <label>H_ref % <input type="number" id="c-Href" value="60" step="1"></label>
+          </div>
+          <p class="note">기후 효과는 실제 자료로 추정하지 않았다 (시험에서 예측 기여가 없었음). 켜면 ERA5 2025-07 ~ 2026-06 월 평균 기온·습도에 사용자가 정한 계수를 쓴다.</p>
+        </div></details>
+        <details><summary>5. 방역·개입 u(t)</summary><div class="sec">
+          <p class="note">접촉 감소 비율 0~1, 구간 [시작일, 끝일). 지역을 비우면 모든 지역.</p>
+          <div id="ints" class="rows"></div>
+          <button type="button" id="add-int" class="ghost">+ 개입 구간</button>
+        </div></details>
+        <details><summary>6. 매개변수 불확실성 (선택)</summary><div class="sec">
+          <p class="note">켠 값은 실행마다 [하한, 상한] 에서 균등하게 뽑아 여러 번 계산한다 (<span class="tag user">사용자 가정 범위</span>). 그래프에 5~95% 띠로 나온다.</p>
+          <div id="unc"></div>
+          <label>반복 횟수 <input type="number" id="u-draws" value="20" min="2" max="100"></label>
+        </div></details>
+        <div class="actions">
+          <button type="submit" id="run-btn" class="primary">실행</button>
+          <span id="run-msg" class="note" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+    </aside>
+  </section>
+
+  <!-- 인플루엔자 최신 예측 -->
+  <section id="tab-flu" hidden>
+    <div class="narrow">
+      <h2>인플루엔자 최신 예측 <span class="tag fc">예측 (기점 이후 4주)</span></h2>
+      <div class="warn">WHO FluNet 실험실 검사 자료(국가 × 감시 체계)의 주간 <b>양성률</b> 예측이다. 양성률은 감염자 수가 아니다. 받은 자료의 마지막 주는 덜 보고되어 있어 그 전 주를 기점으로 했다. 이 페이지는 아래 날짜에 계산해 둔 결과다.</div>
+      <div id="flu-info" class="note"></div>
+    </div>
+    <div class="flu-grid">
+      <div class="card"><div class="row"><strong>나라별 예측 양성률 (ML + 구간 보정 중앙값)</strong>
+        <label class="inline">예측 주 <select id="flu-h"><option value="0">1주 뒤</option><option value="1">2주 뒤</option><option value="2">3주 뒤</option><option value="3">4주 뒤</option></select></label></div>
+        <div id="flu-map" class="map"></div><div id="flu-legend" class="legend"></div>
+        <p class="note">한 나라에 감시 체계가 여럿이면 기점 주 검사 수가 가장 많은 계열을 칠한다. 나라를 누르면 오른쪽 그래프가 바뀐다.</p></div>
+      <div class="card"><label>계열 <select id="flu-series"></select></label>
+        <div id="flu-lg" class="chartlegend"></div><div id="flu-chart" class="chart"></div>
+        <div class="tablewrap"><table id="flu-table"></table></div><div id="flu-warn"></div></div>
+    </div>
+  </section>
+
+  <!-- 예측 검증 -->
+  <section id="tab-val" hidden><div class="narrow" id="val"></div></section>
+
+  <!-- 자료·한계 -->
+  <section id="tab-info" hidden><div class="narrow" id="info"></div></section>
+</main>
+<script src="app.js"></script>

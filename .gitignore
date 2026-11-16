@@ -5,3 +5,4 @@ __pycache__/
 outputs/
 data_raw/
 data_processed/
+site/dist/
