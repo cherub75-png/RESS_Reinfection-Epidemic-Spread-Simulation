@@ -166,19 +166,19 @@ function wsValue(i, k) {
 // 색 기준: 실행·시점과 무관한 고정 로그 간격 (색 8단계, 그 이상은 인접한 색이 구별되지 않는다).
 //  초기: 첫 확산 단계(기본값에서 처음 약 100일)의 값 범위를 3배 간격으로 잘게 나눈다. 위쪽은 "초과" 한 칸으로 묶인다.
 //  전체: 정점까지 보도록 10배 간격.
-// 그 지역의 해당 값이 1명 미만이면 "1명 미만" 으로 따로 칠한다 (ODE 는 소수점 인원도 계산하므로).
+// 그 지역의 해당 값이 1명 미만이면 "안전 (1명 미만)" 청록으로 따로 칠한다 (ODE 는 소수점 인원도 계산하므로).
 const EDGES = {
   early: { per100k: [0.003, 0.01, 0.03, 0.1, 0.3, 1, 3], abs: [3, 10, 30, 100, 300, 1000, 3000] },
   full: { per100k: [0.1, 1, 10, 100, 300, 1000, 3000], abs: [10, 100, 1000, 1e4, 1e5, 1e6, 1e7] },
 };
 function wsBins() { WS.bins = { b: EDGES[$("#ws-bins").value][$("#ws-scale").value] }; }
 function wsStyle(f) {
-  if (WS.mode === "seed" || !WS.data) return { color: css("--surface"), weight: 1, fillOpacity: 0.85, fillColor: seeded().has(f.id) ? css("--seed") : css("--r1") };
+  if (WS.mode === "seed" || !WS.data) return { color: css("--surface"), weight: 1, fillOpacity: 0.85, fillColor: seeded().has(f.id) ? css("--seed") : css("--safe") };
   const k = WS.idx[f.id], d = WS.data;
   let col = css("--nodata");
   if (k !== undefined) {
     const raw = d[$("#ws-layer").value][WS.frame * d.K + k], v = wsValue(WS.frame, k);
-    if (!(raw >= 1)) col = css("--surface-2");
+    if (!(raw >= 1)) col = css("--safe");
     else { let j = 0; while (j < WS.bins.b.length && v > WS.bins.b[j]) j++; col = css(RAMP[Math.min(j, 7)]); }
   }
   const sel = WS.region === f.id;
@@ -193,10 +193,10 @@ function wsTip(f) {
 }
 function wsLegend() {
   const lg = $("#ws-legend"); lg.innerHTML = "";
-  if (WS.mode === "seed" || !WS.data) { lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--seed")}` }), "발생 지역"), el("span", {}, el("span", { class: "sw", style: `background:${css("--r1")}` }), "다른 지역")); return; }
+  if (WS.mode === "seed" || !WS.data) { lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--seed")}` }), "발생 지역"), el("span", {}, el("span", { class: "sw", style: `background:${css("--safe")}` }), "다른 지역 (감염 없음)")); return; }
   const per = $("#ws-scale").value === "per100k", e = WS.bins.b, n = (v) => (v >= 1e4 ? fmt(v) : v.toLocaleString("ko-KR", { maximumFractionDigits: 3 }));
   lg.append(`${$("#ws-layer").selectedOptions[0].text} (${per ? "10만 명당" : "명"}):`);
-  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--surface-2")}` }), "1명 미만"));
+  lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css("--safe")}` }), "안전 (1명 미만)"));
   for (let j = 0; j < 8; j++) lg.append(el("span", {}, el("span", { class: "sw", style: `background:${css(RAMP[j])}` }),
     j === 0 ? `${n(e[0])} 이하` : j < 7 ? `${n(e[j - 1])}–${n(e[j])}` : `${n(e[6])} 초과`));
   if ($("#ws-bins").value === "early") lg.append(el("span", { class: "muted" }, `· ${n(e[6])} 초과는 한 색이다. 정점 무렵은 색 구간을 "전체 기간" 으로 바꿔 본다.`));
@@ -229,10 +229,10 @@ function spark(i) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "전체 감염 중 인원 추이와 현재 시점");
   const mk = (t, a) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; };
   if (d.band) { let p = ""; for (let j = 0; j <= d.days; j++) p += `${j ? "L" : "M"}${X(j)},${Y(d.band.I95[j])}`; for (let j = d.days; j >= 0; j--) p += `L${X(j)},${Y(d.band.I05[j])}`;
-    svg.append(mk("path", { d: p + "Z", fill: css("--s1"), "fill-opacity": 0.18, stroke: "none" })); }
+    svg.append(mk("path", { d: p + "Z", fill: css("--spread"), "fill-opacity": 0.22, stroke: "none" })); }
   let p = ""; for (let j = 0; j < n; j++) p += `${j ? "L" : "M"}${X(j)},${Y(d.It[j])}`;
-  svg.append(mk("path", { d: p, fill: "none", stroke: css("--s1"), "stroke-width": 1.8 }));
-  svg.append(mk("line", { x1: X(i), x2: X(i), y1: 2, y2: H - 2, stroke: css("--s2"), "stroke-width": 1.5 }));
+  svg.append(mk("path", { d: p, fill: "none", stroke: css("--spread"), "stroke-width": 1.8 }));
+  svg.append(mk("line", { x1: X(i), x2: X(i), y1: 2, y2: H - 2, stroke: css("--ink"), "stroke-width": 1.5 }));
   const t = mk("text", { x: 4, y: 11, "font-size": 10, fill: css("--ink-2") }); t.textContent = `전체 감염 중 I (최대 ${fmt(mx)})${d.band ? " · 띠 5~95%" : ""}`; svg.append(t);
   box.innerHTML = ""; box.append(svg);
 }
