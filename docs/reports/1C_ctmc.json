@@ -1,0 +1,119 @@
+{
+  "environment": {
+    "python": "3.13.17",
+    "implementation": "CPython",
+    "platform": "Linux-6.18.44-fc-v153-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 4,
+    "packages": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "numba": "0.68.0",
+      "pydantic": "2.13.5",
+      "PyYAML": "6.0.3",
+      "pytest": "9.1.1"
+    },
+    "git_commit": "a5ea302a8c3914865f992b06f6999d0b33578472-dirty"
+  },
+  "extinction": [
+    {
+      "R0": 2.5,
+      "k": 1,
+      "seed": "I1",
+      "theory": 0.4,
+      "estimate": 0.39575,
+      "z": -0.5486726407127215
+    },
+    {
+      "R0": 2.5,
+      "k": 1,
+      "seed": "E1",
+      "theory": 0.4,
+      "estimate": 0.39025,
+      "z": -1.258719587517415
+    },
+    {
+      "R0": 2.5,
+      "k": 2,
+      "seed": "I1",
+      "theory": 0.16000000000000003,
+      "estimate": 0.15675,
+      "z": -0.560678266965668
+    },
+    {
+      "R0": 1.5,
+      "k": 1,
+      "seed": "I1",
+      "theory": 0.6666666666666666,
+      "estimate": 0.6585,
+      "z": -1.0956733089748956
+    }
+  ],
+  "final_size": {
+    "N": 5000.0,
+    "runs": 600,
+    "major": 600,
+    "z_theory": 0.8909379750880365,
+    "z_mean": 0.8907203333333332,
+    "z_se": 0.00031765308655553205,
+    "var_ratio_N_var_over_theory": 0.9800648284958664
+  },
+  "lln": [
+    {
+      "N": 5000.0,
+      "runs": 16,
+      "sup_mean_dev_over_peak": 0.032827028550681384,
+      "median_single_path_sup_dev_over_peak": 0.09169854293661801
+    },
+    {
+      "N": 50000.0,
+      "runs": 16,
+      "sup_mean_dev_over_peak": 0.01285049131807628,
+      "median_single_path_sup_dev_over_peak": 0.03408238234037529
+    },
+    {
+      "N": 500000.0,
+      "runs": 4,
+      "sup_mean_dev_over_peak": 0.00503252414889339,
+      "median_single_path_sup_dev_over_peak": 0.009608461446347465
+    }
+  ],
+  "performance": [
+    {
+      "case": "단일 지역 N=1e4",
+      "days": 365,
+      "channels": 49,
+      "events": 127981,
+      "wall_s": 0.03817532899984144,
+      "events_per_s": 3352453.098715444
+    },
+    {
+      "case": "단일 지역 N=1e5",
+      "days": 365,
+      "channels": 49,
+      "events": 1221607,
+      "wall_s": 0.3847709130000112,
+      "events_per_s": 3174894.3559046118
+    },
+    {
+      "case": "단일 지역 N=1e6",
+      "days": 365,
+      "channels": 49,
+      "events": 11913323,
+      "wall_s": 4.0562151809999705,
+      "events_per_s": 2937053.9945228035
+    },
+    {
+      "case": "합성 17지역 5천만 명 (1일 측정)",
+      "days": 1,
+      "channels": 9809,
+      "events": 378242,
+      "wall_s": 9.811625134999758,
+      "events_per_s": 38550.392498256544,
+      "move_share_of_rate_at_t0": 0.9999853881393401,
+      "extrapolated_hours_per_365d_run_lower_bound": 0.9947897706319199
+    }
+  ],
+  "total_wall_s": 39.89650518000008,
+  "peak_rss_MB": 277.51953125
+}

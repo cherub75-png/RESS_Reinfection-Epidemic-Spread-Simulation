@@ -1,0 +1,54 @@
+# 전 세계 국가 단위 예제 (실제 자료 + 명시적 가정)
+# 지역 자료: data_processed/world_countries_2019.nc  (만드는 법: README "데이터")
+#   - 경계: Natural Earth 5.2.0-pre (공개 도메인), 인구: World Bank 2019 (+ 일부 Natural Earth POP_EST 2019)
+#   - 항공 omega: OpenFlights 노선 수 비례 + 하루 5e6 회 이동 (가정, 승객 자료 아님)
+#   - 통근 C: radiation 모형 + commute_fraction 0.002, contact_share 0.3 (가정)
+# 감염병 값은 COVID 유사 "코드 검증용 가정" 이며 실제 COVID-19 추정치가 아니다.
+run_mode: development
+meta:
+  name: world_countries_2019
+  note: real boundaries/population/air network with explicit assumptions; disease values are assumptions
+disease:
+  name: covid_like_assumption
+  sigma: 1/5.2
+  gamma: 1/7
+  # 전 세계 국가 단위에서는 network 기준이 인구가 아주 적고 밀도가 극단적인 지역(바티칸 등)에 의해 정해진다.
+  # 그래서 이 예제는 reference 기준(rho_ref 에서 R0 = 2.5)을 명시한다. 근거: docs/DECISIONS.md D-008
+  transmission: {R0: 2.5, r0_reference: reference}
+  P1: 1.0
+  T1: 1.0
+  Pmin: 0.3
+  alpha: 0.5
+  beta: 0.3
+  lam: 1/180
+  f1: 0.01
+  phi: {form: power, delta: 0.5}
+  M: 8
+regions:
+  source: dataset
+  path: ../data_processed/world_countries_2019.nc
+contact_model:
+  h: {form: power, eta: 0.2}
+  rho_ref: pop_weighted_mean
+environment:
+  g: {form: constant}
+  status: neutral_default
+  source: none
+initial:
+  start_date: 2020-01-01
+  seed_compartment: I1
+  seeds:
+    - {region: CHN, count: 10}
+simulation:
+  days: 365
+  output_dt: 1.0
+  method: hybrid
+  # D-007: 여러 지역 모형(M3)에서는 하이브리드가 eps 0.01 에서도 선택 규칙을 통과했다. 전 세계 실행 시간 때문에 0.01 을 쓴다.
+  # 최종 규모·누적 사망을 정밀하게 볼 때는 0.003 (기본값) 을 쓴다.
+  tau_leap_epsilon: 0.01
+  n_runs: 100
+  seed: 20260101
+datasets:
+  - {name: ne_admin0_10m, role: current_input, source: Natural Earth, version: 5.2.0-pre, license: public domain, resolution: 1:10m, time_range: boundaries}
+  - {name: wb_population, role: current_input, source: World Bank SP.POP.TOTL (datahub mirror), version: main, license: CC BY 4.0, resolution: country, time_range: "2019"}
+  - {name: openflights, role: current_input, source: OpenFlights, version: master, license: ODbL 1.0, resolution: airport pairs, time_range: routes 2014-06}

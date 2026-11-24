@@ -1,0 +1,28 @@
+# 대한민국 시도 17개 예제 (템플릿). 인구 격자(WorldPop 2020)가 아직 미확보라 지금은 실행되지 않는다.
+# 자료 만들기: python -I scripts/build_regions.py admin1 --country KOR --air-trips-per-day 9e4 \
+#   --commute-fraction 0.05 --contact-share 0.3 --out data_processed/KOR_admin1.nc \
+#   --population-raster data_raw/worldpop_kor_2020_1km/kor_ppp_2020_1km_Aggregated_UNadj.tif
+# 가정 매개변수(국내 항공 하루 9e4 회, 통근 5%, 목적지 접촉 30%)는 자료가 아니다.
+run_mode: development
+meta: {name: kor_admin1}
+disease:
+  sigma: 1/5.2
+  gamma: 1/7
+  transmission: {R0: 2.5, r0_reference: reference}   # 기준 지역을 고르려면 r0_reference: region, reference_region: KR_11 등
+  P1: 1.0
+  T1: 1.0
+  Pmin: 0.3
+  alpha: 0.5
+  beta: 0.3
+  lam: 1/180
+  f1: 0.01
+  phi: {form: power, delta: 0.5}
+  M: 8
+regions: {source: dataset, path: ../data_processed/KOR_admin1.nc}
+contact_model:
+  h: {form: power, eta: 0.2}
+  rho_ref: pop_weighted_mean
+initial:
+  start_date: 2020-01-20
+  seeds: [{region: KR-11, count: 10}]
+simulation: {days: 365, method: hybrid, n_runs: 100}

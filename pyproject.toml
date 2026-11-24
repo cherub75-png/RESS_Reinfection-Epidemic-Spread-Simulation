@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seir_sim"
+version = "0.1.0"
+description = "Global reinfection SEIR spread simulator (ODE / SDE / CTMC / hybrid)"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5",
+    "pydantic>=2.13",
+    "PyYAML>=6.0",
+    "scipy>=1.18",
+    "numba>=0.68",
+    "shapely>=2.2",
+    "pyproj>=3.8",
+    "rasterio>=1.5",
+    "xarray>=2026.9",
+    "h5netcdf>=1.8",
+    "h5py>=3.16",
+    "pyarrow>=26.0",
+    "matplotlib>=3.11",
+    "pandas>=3.0",
+    "scikit-learn>=1.9",
+    "numcodecs>=0.17",            # ERA5 (Zarr) 청크 해독
+]
+
+[project.optional-dependencies]
+test = ["pytest>=9.1", "httpx>=0.28"]
+web = ["fastapi>=0.124", "uvicorn>=0.38", "python-multipart>=0.0.20"]
+
+[project.scripts]
+seir-sim = "seir_sim.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["seir_sim*"]
+
+[tool.setuptools.package-data]
+"seir_sim.web" = ["static/*", "static/vendor/*/*", "static/vendor/*/images/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::seir_sim.simulate.result.LastBinWarning"]

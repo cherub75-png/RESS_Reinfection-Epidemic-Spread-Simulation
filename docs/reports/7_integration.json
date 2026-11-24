@@ -1,0 +1,21 @@
+{
+ "config": "configs/calibrated/KOR_2020-02-01_2021-10-31.yaml",
+ "max_rel_state_error_engine_vs_fastode": 5.874826712905039e-09,
+ "max_rel_daily_deaths_error": 3.96820216957536e-07,
+ "model_cases_total": 364946.7171600041,
+ "observed_cases_total_jhu": 366375.0,
+ "hybrid": {
+  "runs": 30,
+  "wall_s": 2.6449797929999477,
+  "outbreak_probability": 1.0,
+  "median_rel_diff_mean_vs_ode_after_day30": 0.05220873320590366,
+  "extinct_runs": 0
+ },
+ "scenario_u_plus_0.1_nov_dec_2020": {
+  "label": "가정에 따른 결과 (예측 아님)",
+  "first_infections_to_2021-03-31_base": 212800.68834497035,
+  "first_infections_to_2021-03-31_scenario": 84906.03690385073,
+  "deaths_model_to_2021-03-31_base": 2014.0506496250712,
+  "deaths_model_to_2021-03-31_scenario": 837.6779594062959
+ }
+}

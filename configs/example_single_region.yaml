@@ -1,0 +1,53 @@
+# 1-A 검증용 예제: 단일 합성 지역. 실제 지역 자료가 아니다.
+# 감염병 값은 COVID 유사 "초기 코드 검증용 가정" 이며 실제 COVID-19 추정치가 아니다.
+run_mode: development
+meta:
+  name: example_single_region
+  note: synthetic, code-verification assumptions only
+
+disease:
+  name: covid_like_assumption
+  sigma: 1/5.2          # 1/일, 평균 잠복기 5.2일
+  gamma: 1/7            # 1/일, 평균 감염기간 7일
+  transmission:
+    R0: 2.5
+    r0_reference: reference   # reference (기본) | region (+ reference_region) | origin | population_mean | network
+  P1: 1.0
+  T1: 1.0
+  Pmin: 0.3
+  alpha: 0.5
+  beta: 0.3
+  lam: 1/180            # 1/일, 면역 소실
+  f1: 0.01
+  phi: {form: power, delta: 0.5}   # phi(n) = n^-0.5
+  M: 8
+  note: initial code-verification assumptions, not fitted to COVID-19 data
+
+regions:
+  source: synthetic_single
+  population: 1.0e6
+  density: 1.0
+
+contact_model:
+  h: {form: power, eta: 0.2}
+  rho_ref: pop_weighted_mean
+
+environment:
+  g: {form: constant}
+  status: neutral_default   # g = 1: 환경 효과 없음 (추정 전 기본 상태, 추정 결과 아님)
+
+interventions: []
+
+initial:
+  start_date: 2020-01-20
+  seed_compartment: I1      # I1 (감염 중) | E1 (잠복기)
+  seeds:
+    - {region: region0, count: 10}
+
+simulation:
+  days: 365
+  output_dt: 1.0
+  method: ode
+  n_runs: 100
+  seed: 20260101
+  hybrid: {threshold_up: 100, threshold_down: 50}
